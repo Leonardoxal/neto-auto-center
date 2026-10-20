@@ -141,6 +141,35 @@ export function Cadastros() {
     <Section title="Áreas da oficina" right={store.pode('areas') ? <button className="tbtn" onClick={novaArea}>+ Nova</button> : undefined}>
       <div className="group" style={{ padding: '12px 14px' }}><div className="chips">{store.areas.map(a => <span key={a.id} className="pill">{a.nome}</span>)}</div></div>
     </Section>
+    <EspacoAnexos />
     <Section title="Oficina"><div className="group"><KV k="Nome" v="NETO AUTO CENTER — Gestão Operacional" /><KV k="Fuso horário" v="Tangará da Serra (UTC−4)" /><KV k="Datas e valores" v="DD/MM/AAAA · Real (R$)" /></div></Section>
   </>
+}
+
+function EspacoAnexos() {
+  const store = useStore(); const sheet = useSheet()
+  const [uso, setUso] = useState<{ bytes: number; arquivos: number } | null>(null)
+  const [dias, setDias] = useState<number | null>(null)
+  useEffect(() => {
+    supabase.rpc('espaco_anexos').then(r => { if (!r.error && r.data?.[0]) setUso({ bytes: +r.data[0].bytes, arquivos: +r.data[0].arquivos }) })
+    supabase.from('configuracoes').select('anexos_dias_apos_saida').eq('id', 1).maybeSingle().then(r => { if (!r.error && r.data) setDias(r.data.anexos_dias_apos_saida) })
+  }, [store.versao])
+  if (!uso) return null
+  const GB = 1024 ** 3, frac = Math.min(1, uso.bytes / GB)
+  const mb = (b: number) => (b / 1048576).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' MB'
+  const editar = () => sheet.open({ title: 'Limpeza dos anexos', done: 'Prazo salvo',
+    body: <><Fg><Field label="Apagar arquivos após a saída"><Select name="d" value={String(dias ?? 7)} options={[['0', 'Na hora'], ['7', '7 dias'], ['30', '30 dias'], ['90', '90 dias'], ['365', '1 ano']]} /></Field></Fg>
+      <Note>Depois da saída do veículo, os PDFs e prints são apagados nesse prazo para liberar espaço. Itens, valores e histórico ficam guardados.</Note></>,
+    async onSave(f) { const { error } = await supabase.from('configuracoes').update({ anexos_dias_apos_saida: +f.d }).eq('id', 1); if (error) return msgErro(error); setDias(+f.d) } })
+  return <Section title="Anexos" foot="Plano gratuito do Supabase: 1 GB para arquivos. Prints são reduzidos automaticamente antes do envio.">
+    <div className="group">
+      <div className="row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Espaço usado</span><b className="tnum">{mb(uso.bytes)} de 1 GB</b></div>
+        <div style={{ height: 8, borderRadius: 4, background: 'var(--fill)', overflow: 'hidden' }}><div style={{ width: `${Math.max(1, frac * 100)}%`, height: '100%', background: frac > 0.85 ? 'var(--red)' : frac > 0.6 ? 'var(--orange)' : 'var(--green)' }} /></div>
+        <span className="muted sm">{uso.arquivos} arquivo(s) guardado(s)</span>
+      </div>
+      <button className="row" onClick={store.pode('areas') ? editar : undefined} disabled={!store.pode('areas')}>
+        <span className="rm">Apagar anexos após a saída</span><span className="muted">{dias == null ? '—' : dias === 0 ? 'na hora' : dias === 365 ? '1 ano' : `${dias} dias`}</span>{store.pode('areas') && <Ic n="chev" className="chev" />}</button>
+    </div>
+  </Section>
 }

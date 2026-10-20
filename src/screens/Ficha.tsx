@@ -10,6 +10,8 @@ import { Field, Fg, Group, Ic, KV, Nav, Note, Pill, Plate, Section, Select, useS
 import { AtRow, Etapas, usePresenca, useNav } from './comum'
 import { AprovarItensCorpo, ItensOrcamento, acoesItens, lerAprovacao } from './Itens'
 import type { Item } from '../lib/domain'
+import type { Anexo } from '../lib/anexos'
+import { AnexosSecao } from './Anexos'
 
 const agora = () => paraInputLocal(new Date())
 
@@ -18,6 +20,7 @@ export function Ficha({ id }: { id: string }) {
   const [a, setA] = useState<Atendimento | null | undefined>(undefined)
   const [outros, setOutros] = useState<Atendimento[]>([])
   const [itens, setItens] = useState<Item[]>([])
+  const [anexos, setAnexos] = useState<Anexo[]>([])
 
   useEffect(() => {
     let vivo = true
@@ -25,6 +28,7 @@ export function Ficha({ id }: { id: string }) {
       if (!vivo) return
       const data = d as unknown as Atendimento | null
       setA(data ?? null)
+      if (data) supabase.from('anexos').select('*').eq('atendimento_id', id).order('criado_em').then(r => vivo && setAnexos(r.error ? [] : (r.data ?? []) as Anexo[]))
       if (data) supabase.from('orcamento_itens').select('*').eq('atendimento_id', id).order('seq').then(r => vivo && setItens(r.error ? [] : (r.data ?? []) as Item[]))
       if (data) supabase.from('atendimentos').select('*').eq('placa', data.placa).neq('id', id).order('entrada', { ascending: false })
         .then(r => vivo && setOutros((r.data ?? []) as Atendimento[]))
@@ -39,20 +43,11 @@ export function Ficha({ id }: { id: string }) {
   const run = (fn: string, args: Record<string, unknown>) => store.rpc(fn, { p_at: a.id, ...args })
   const areas = store.areas.filter(x => x.ativa).map(x => x.nome)
   const vi = valorInicial(a), va = valorAtual(a)
-  const temItens = itens.length > 0
   const acItens = acoesItens(a, store, sheet)
 
   // ---------- ações ----------
   const acoes: [string, string, string, Acao | null, () => void][] = [
-    ['orc', temItens ? '+ Item' : 'Orçamento', 'edit', 'orcamento', () => temItens ? acItens.novo() : sheet.open({
-      title: va == null ? 'Registrar orçamento' : 'Revisar orçamento', done: 'Orçamento registrado',
-      body: <><Fg>{va != null && <Field label="Valor atual"><span className="muted">{brl(va)}</span></Field>}
-        <Field label={va == null ? 'Valor' : 'Novo valor'}><input name="v" inputMode="decimal" placeholder="0,00" /></Field>
-        <Field label="Data e hora"><input name="t" type="datetime-local" defaultValue={agora()} /></Field>
-        <Field label="Observação" col><textarea name="obs" /></Field></Fg>
-        <Note>Cada revisão fica guardada. Nenhum valor anterior é apagado. Para detalhar peças e serviços, use <b>+ Item</b> na seção Itens do orçamento.</Note></>,
-      onSave: f => { const v = numero(f.v); if (!v || v <= 0) return 'Informe um valor maior que zero.'; return run('registrar_orcamento', { p_valor: v, p_em: deInputLocal(f.t), p_obs: f.obs }) },
-    })],
+    ['orc', 'Lançar orçamento', 'edit', 'orcamento', () => acItens.novo()],
     ['enviar', 'Enviar', 'out', 'enviar', () => {
       if (va == null) { sheet.toast('Registre o valor do orçamento antes de enviar.'); return }
       sheet.open({ title: 'Enviar orçamento', done: 'Envio registrado. O tempo de aprovação começou a contar.',
@@ -188,6 +183,7 @@ export function Ficha({ id }: { id: string }) {
       return <button key={k} className={`act ${ok ? '' : 'lock'}`} onClick={() => ok ? fn() : guard(p!)}><span className="ib"><Ic n={ok ? i : 'lock'} /></span>{l}</button>
     })}</div></section>
     <ItensOrcamento a={a} itens={itens} />
+    <AnexosSecao a={a} anexos={anexos} />
     <div className="cols2"><div>
       <Section title="Situação" foot="As cinco situações são independentes. Um veículo pode estar no pátio, aprovado, em execução e faturado ao mesmo tempo.">
         <div className="group">{([['fisica', 'Física', noPatio(a) && a.na_oficina === false ? 'Com o condutor' : FISICA[a.sit_fisica] + (a.arquivado ? ' · arquivado' : '')], ['comercial', 'Comercial', a.sit_comercial], ['operacional', 'Operacional', a.sit_operacional], ['fiscal', 'Fiscal', a.sit_fiscal], ['financeira', 'Financeira', a.sit_financeira]] as const).map(([k, l, v]) =>

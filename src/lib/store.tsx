@@ -58,6 +58,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (lista2.length) {
       const it = await supabase.from('orcamento_itens').select('*').in('atendimento_id', lista2.map(a => a.id)).order('seq')
       if (!it.error) for (const a of lista2) a.orcamento_itens = (it.data ?? []).filter(i => i.atendimento_id === a.id)
+      const ax = await supabase.from('anexos').select('atendimento_id').is('removido_em', null).in('atendimento_id', lista2.map(a => a.id))
+      if (!ax.error) for (const a of lista2) a.n_anexos = (ax.data ?? []).filter(x => x.atendimento_id === a.id).length
     }
     setAtivos(lista2)
     setVersao(v => v + 1)
@@ -65,6 +67,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [session])
 
   useEffect(() => { if (session) { setCarregando(true); recarregar() } else { setMe(null) } }, [session, recarregar])
+
+  // limpeza automática dos anexos de atendimentos finalizados (gerência/administrador, 1x por dia)
+  useEffect(() => {
+    if (!me || !pode(me.perfil, 'arquivar')) return
+    import('./anexos').then(m => m.limpezaAutomatica()).catch(() => {})
+  }, [me])
 
   // atualização ao vivo: qualquer mudança em atendimentos/eventos recarrega (agrupado)
   useEffect(() => {
@@ -74,6 +82,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'atendimentos' }, agendar)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'eventos' }, agendar)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orcamento_itens' }, agendar)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'anexos' }, agendar)
       .subscribe()
     const vis = () => { if (document.visibilityState === 'visible') agendar() }
     document.addEventListener('visibilitychange', vis)

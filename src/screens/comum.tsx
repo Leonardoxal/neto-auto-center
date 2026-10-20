@@ -90,6 +90,7 @@ export function VCard({ a }: { a: Atendimento }) {
             return <><span className="tag">{R.ativos} {R.ativos === 1 ? 'item' : 'itens'} · {brl(R.total)}</span>
               {R.retirados.length > 0 && <span className="tag">{R.retirados.length} retirado(s)</span>}
               {comp > 0 && <span className="tag o">{comp} aguardando autorização</span>}</> })()}
+          {!!a.n_anexos && <span className="tag">{a.n_anexos} {a.n_anexos === 1 ? 'anexo' : 'anexos'}</span>}
         </div>
       </div>
       <div className="vmeta">

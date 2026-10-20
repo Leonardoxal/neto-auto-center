@@ -42,7 +42,7 @@ export interface Atendimento {
   sit_fiscal: string; sit_financeira: string; arquivado: boolean
   enviado_em: string | null; aprovado_em: string | null; recusado_em: string | null; valor_aprovado: number | null
   inicio_em: string | null; concluido_em: string | null; criado_em: string; atualizado_em: string
-  na_oficina?: boolean; fora_desde?: string | null
+  na_oficina?: boolean; fora_desde?: string | null; n_anexos?: number
   orcamento_revisoes?: Revisao[]; descontos?: Desconto[]; notas_fiscais?: Nota[]; esperas?: Espera[]; orcamento_itens?: Item[]
   movimentacoes?: Movimentacao[]; eventos?: Evento[]
 }
