@@ -7,12 +7,12 @@ import { brl, deInputLocal, dur, fData, fDataHora, fHora, numero, paraInputLocal
 import { SEL_FICHA, useStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
 import { Field, Fg, Group, Ic, KV, Nav, Note, Pill, Plate, Section, Select, useSheet } from '../ui/ui'
-import { AtRow, useNav } from './comum'
+import { AtRow, Etapas, usePresenca, useNav } from './comum'
 
 const agora = () => paraInputLocal(new Date())
 
 export function Ficha({ id }: { id: string }) {
-  const store = useStore(); const nav = useNav(); const sheet = useSheet()
+  const store = useStore(); const nav = useNav(); const sheet = useSheet(); const presenca = usePresenca()
   const [a, setA] = useState<Atendimento | null | undefined>(undefined)
   const [outros, setOutros] = useState<Atendimento[]>([])
 
@@ -99,6 +99,7 @@ export function Ficha({ id }: { id: string }) {
       body: <Fg><Field label="Origem"><span className="muted">{a.local}</span></Field><Field label="Destino"><Select name="para" options={areas.filter(x => x !== a.local)} /></Field>
         <Field label="Quando"><input name="t" type="datetime-local" defaultValue={agora()} /></Field><Field label="Observação" col><textarea name="obs" /></Field></Fg>,
       onSave: f => run('movimentar', { p_destino: f.para, p_em: deInputLocal(f.t), p_obs: f.obs }) })],
+    ...(noPatio(a) ? [['presenca', a.na_oficina === false ? 'Voltou à oficina' : 'Condutor levou', 'car', 'presenca', () => presenca(a)] as [string, string, string, Acao | null, () => void]] : []),
     ['saida', 'Saída', 'exit', 'saida', () => {
       if (!noPatio(a)) { sheet.toast('Este veículo já não está no pátio.'); return }
       const avisos = [a.sit_operacional !== 'Serviço concluído' && 'O serviço não está marcado como concluído.', faturado(a) === 0 && a.sit_comercial === 'Aprovado' && 'Ainda não há nota fiscal emitida.'].filter(Boolean)
@@ -167,13 +168,18 @@ export function Ficha({ id }: { id: string }) {
       <div className="sub">{a.modelo || 'Modelo não informado'} · <button className="tbtn" style={{ display: 'inline', padding: 0, minHeight: 0, fontSize: 'inherit' }} onClick={() => nav.push({ r: 'loc', id: a.locadora_id })}>{store.locNome(a.locadora_id)}</button> · {a.numero}</div>
       {outros.length > 0 && <div className="muted sm">{outros.length} outro(s) atendimento(s) desta placa no histórico.</div>}
     </div>
+    <section className="sec"><div className="group" style={{ padding: '12px 10px 8px' }}><Etapas a={a} /></div>
+      {noPatio(a) && <div className="chips" style={{ marginTop: 8 }}>
+        {faturado(a) > 0 ? <span className="tag g">Nota emitida · {brl(faturado(a))}</span> : <span className="tag">Sem nota</span>}
+        {a.na_oficina === false ? <span className="tag r">Fora da oficina · com o condutor{a.fora_desde ? ' desde ' + fDataHora(a.fora_desde) : ''}</span> : <span className="tag">Na oficina · {a.local}</span>}
+      </div>}</section>
     <section className="sec"><div className="acts">{acoes.map(([k, l, i, p, fn]) => {
       const ok = !p || store.pode(p)
       return <button key={k} className={`act ${ok ? '' : 'lock'}`} onClick={() => ok ? fn() : guard(p!)}><span className="ib"><Ic n={ok ? i : 'lock'} /></span>{l}</button>
     })}</div></section>
     <div className="cols2"><div>
       <Section title="Situação" foot="As cinco situações são independentes. Um veículo pode estar no pátio, aprovado, em execução e faturado ao mesmo tempo.">
-        <div className="group">{([['fisica', 'Física', FISICA[a.sit_fisica] + (a.arquivado ? ' · arquivado' : '')], ['comercial', 'Comercial', a.sit_comercial], ['operacional', 'Operacional', a.sit_operacional], ['fiscal', 'Fiscal', a.sit_fiscal], ['financeira', 'Financeira', a.sit_financeira]] as const).map(([k, l, v]) =>
+        <div className="group">{([['fisica', 'Física', noPatio(a) && a.na_oficina === false ? 'Com o condutor' : FISICA[a.sit_fisica] + (a.arquivado ? ' · arquivado' : '')], ['comercial', 'Comercial', a.sit_comercial], ['operacional', 'Operacional', a.sit_operacional], ['fiscal', 'Fiscal', a.sit_fiscal], ['financeira', 'Financeira', a.sit_financeira]] as const).map(([k, l, v]) =>
           <button key={k} className="row" onClick={() => situacao(k)}><span className="rm">{l}</span><Pill s={v} /><Ic n="chev" className="chev" /></button>)}</div>
       </Section>
       <Section title="Atendimento"><div className="group">

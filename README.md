@@ -11,7 +11,7 @@ Sistema interno da NETO AUTO CENTER (Tangará da Serra/MT) para controle de pát
 
 ### 1. Banco de dados (Supabase)
 1. No painel do projeto, abra **SQL Editor › New query**.
-2. Cole todo o conteúdo de `supabase/migrations/0001_base.sql` e clique em **Run**. Pode rodar de novo sem problema.
+2. Cole o conteúdo de cada arquivo da pasta `supabase/migrations/`, **na ordem** (`0001_base.sql`, depois `0002_presenca.sql`…), e clique em **Run** a cada um. Pode rodar de novo sem problema.
 3. Em **Authentication › Sign In / Providers**, deixe **Email** ligado e **desligue "Allow new users to sign up"**. Assim só o administrador cria contas.
 4. Em **Authentication › URL Configuration**, coloque o endereço do sistema na Vercel em **Site URL** (para o link de "Esqueci a senha" funcionar).
 5. Em **Authentication › Users › Add user › Create new user**, crie o seu usuário com **Auto Confirm User** marcado. **O primeiro usuário criado vira Administrador.**

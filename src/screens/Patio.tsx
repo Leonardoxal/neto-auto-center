@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { alerta, LISTAS, OPERACIONAL, noPatio, semAtualizacao, tempoNoPatio, ultimaAtualizacao, type Atendimento } from '../lib/domain'
+import { faturado, alerta, LISTAS, OPERACIONAL, naOficina, comCondutor, noPatio, semAtualizacao, tempoNoPatio, ultimaAtualizacao, type Atendimento } from '../lib/domain'
 import { dur, fDataHora } from '../lib/format'
 import { useStore } from '../lib/store'
 import { Ic, Nav, Pill, Plate, Seg, Section, Tile } from '../ui/ui'
-import { AtRow, Lista, useNav } from './comum'
+import { AtRow, Lista, VCard, useNav } from './comum'
 import { useEntrada } from './Entrada'
 
 const lembrar = (k: string, v?: string) => { try { if (v === undefined) return localStorage.getItem(k) ?? ''; localStorage.setItem(k, v) } catch { /* sem armazenamento */ } return '' }
@@ -11,7 +11,7 @@ const lembrar = (k: string, v?: string) => { try { if (v === undefined) return l
 export function Patio({ lista: inicial, onBack }: { lista?: string; onBack?: () => void }) {
   const { ativos, locadoras, locNome } = useStore(); const nav = useNav(); const entrada = useEntrada()
   const [seg, setSeg] = useState(inicial || 'todos')
-  const [view, setView] = useState<'lista' | 'tabela' | 'quadro'>((lembrar('patio-view') as 'lista') || 'lista')
+  const [view, setView] = useState<'etapas' | 'tabela' | 'quadro'>(() => { const v = lembrar('patio-view'); return v === 'tabela' || v === 'quadro' ? v : 'etapas' })
   const [q, setQ] = useState(''); const [loc, setLoc] = useState(''); const [resp, setResp] = useState(''); const [ord, setOrd] = useState('tempo')
   const L = LISTAS[seg] ?? LISTAS.todos
   const rows = ativos.filter(L.f).filter(a => (!loc || a.locadora_id === loc) && (!resp || a.responsavel === resp)
@@ -21,7 +21,7 @@ export function Patio({ lista: inicial, onBack }: { lista?: string; onBack?: () 
   const mudarView = (v: typeof view) => { setView(v); lembrar('patio-view', v) }
 
   return <>
-    <Nav title="Pátio ativo" onBack={onBack} backLabel="Início" sub={`${ativos.filter(noPatio).length} veículos fisicamente na oficina`}
+    <Nav title="Pátio ativo" onBack={onBack} backLabel="Início" sub={`${ativos.filter(naOficina).length} na oficina${ativos.filter(comCondutor).length ? ` · ${ativos.filter(comCondutor).length} com o condutor` : ''}`}
       right={<button className="ibtn solid" onClick={entrada} aria-label="Nova entrada" title="Nova entrada"><Ic n="plus" /></button>} />
     <div className="stack">
       <label className="search"><Ic n="search" sm /><input id="pq" value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar placa, modelo, protocolo ou OS" autoComplete="off" /></label>
@@ -31,22 +31,23 @@ export function Patio({ lista: inicial, onBack }: { lista?: string; onBack?: () 
         <select id="ploc" value={loc} onChange={e => setLoc(e.target.value)} aria-label="Locadora"><option value="">Todas as locadoras</option>{locadoras.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}</select>
         <select id="presp" value={resp} onChange={e => setResp(e.target.value)} aria-label="Responsável"><option value="">Todos os responsáveis</option>{resps.map(r => <option key={r}>{r}</option>)}</select>
         <select id="psort" value={ord} onChange={e => setOrd(e.target.value)} aria-label="Ordenar"><option value="tempo">Mais tempo no pátio</option><option value="parado">Mais tempo sem atualização</option><option value="recente">Entrada mais recente</option></select>
-        <Seg value={view} onChange={mudarView} options={[['lista', 'Lista'], ['tabela', 'Tabela'], ['quadro', 'Quadro']]} />
+        <Seg value={view} onChange={mudarView} options={[['etapas', 'Etapas'], ['tabela', 'Tabela'], ['quadro', 'Quadro']]} />
       </div>
       {view === 'quadro' ? <div className="kb">{OPERACIONAL.map(o => { const c = rows.filter(a => a.sit_operacional === o); return <div className="kcol" key={o}>
         <h4><span>{o}</span><span className="muted">{c.length}</span></h4>
         {c.length ? c.map(a => <button key={a.id} className="kcard" onClick={() => nav.push({ r: 'at', id: a.id })}>
           <div className="r1"><Plate p={a.placa} /><span className={`dot ${alerta(a)}`} /></div>
           <div className="r2">{a.modelo} · {locNome(a.locadora_id)}</div>
-          <div className="chips"><Pill s={a.sit_comercial} /><span className="pill">{dur(tempoNoPatio(a))}</span></div>
+          <div className="chips"><Pill s={a.sit_comercial} /><span className="pill">{dur(tempoNoPatio(a))}</span>{comCondutor(a) && <span className="tag r">Com o condutor</span>}{faturado(a) > 0 && <span className="tag g">Nota</span>}</div>
         </button>) : <div className="muted sm" style={{ padding: 4 }}>Vazio</div>}
       </div> })}</div>
-        : view === 'tabela' ? (rows.length ? <div className="tblwrap"><table><thead><tr>{['Placa', 'Modelo', 'Locadora', 'Condutor', 'Entrada', 'No pátio', 'Comercial', 'Operacional', 'Fiscal', 'Local', 'Responsável', 'Motivo da espera', 'Últ. atualização'].map(h => <th key={h}>{h}</th>)}</tr></thead>
+        : view === 'tabela' ? (rows.length ? <div className="tblwrap"><table><thead><tr>{['Placa', 'Modelo', 'Locadora', 'Onde está', 'Nota', 'Condutor', 'Entrada', 'No pátio', 'Comercial', 'Operacional', 'Fiscal', 'Local', 'Responsável', 'Motivo da espera', 'Últ. atualização'].map(h => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>{rows.map(a => <tr key={a.id} onClick={() => nav.push({ r: 'at', id: a.id })} style={{ cursor: 'pointer' }}>
-            <td><Plate p={a.placa} /></td><td>{a.modelo}</td><td>{locNome(a.locadora_id)}</td><td>{a.condutor}</td><td>{fDataHora(a.entrada)}</td><td>{dur(tempoNoPatio(a))}</td>
+            <td><Plate p={a.placa} /></td><td>{a.modelo}</td><td>{locNome(a.locadora_id)}</td><td>{comCondutor(a) ? <span className="tag r">Com o condutor</span> : a.local}</td><td>{faturado(a) > 0 ? <span className="tag g">Emitida</span> : <span className="tag">Sem nota</span>}</td><td>{a.condutor}</td><td>{fDataHora(a.entrada)}</td><td>{dur(tempoNoPatio(a))}</td>
             <td><Pill s={a.sit_comercial} /></td><td><Pill s={a.sit_operacional} /></td><td><Pill s={a.sit_fiscal} /></td><td>{a.local}</td><td>{a.responsavel}</td><td>{a.motivo_espera || '—'}</td><td>{fDataHora(ultimaAtualizacao(a))}</td>
           </tr>)}</tbody></table></div> : <Lista itens={[]} vazio="Nenhum veículo nesta lista." />)
-          : <Lista itens={rows} vazio={ativos.length ? 'Nenhum veículo nesta lista.' : 'Nenhum veículo no pátio. Toque em + para registrar a primeira entrada.'} />}
+          : rows.length ? <div className="vlist">{rows.map(a => <VCard key={a.id} a={a} />)}</div>
+          : <Lista itens={[]} vazio={ativos.length ? 'Nenhum veículo nesta lista.' : 'Nenhum veículo no pátio. Toque em + para registrar a primeira entrada.'} />}
       <p className="foot"><span className="dot w" style={{ display: 'inline-block' }} /> sem atualização há mais de 3 dias &nbsp; <span className="dot c" style={{ display: 'inline-block' }} /> há mais de 7 dias</p>
     </div>
   </>
@@ -69,7 +70,8 @@ export function Inicio() {
       <button className="btn" onClick={entrada}><Ic n="plus" sm /> Nova entrada</button></div></div></section>}
     <Section title="Pátio agora" right={<button className="tbtn" onClick={() => nav.go('patio')}>Abrir pátio</button>}>
       <div className="tiles t3">
-        <Tile label="No pátio" value={P.length} foot="veículos fisicamente na oficina" onClick={lista('todos')} />
+        <Tile label="Na oficina" value={P.filter(naOficina).length} foot={`${P.length} atendimentos ativos`} onClick={lista('todos')} />
+        <Tile label="Com o condutor" value={P.filter(comCondutor).length} foot="atendimento ativo, veículo fora" cls={P.filter(comCondutor).length ? 'warn' : ''} onClick={lista('fora')} />
         <Tile label="Aguardando orçamento" value={n('orc')} onClick={lista('orc')} />
         <Tile label="Aguardando aprovação" value={n('aprov')} cls={n('aprov') ? 'warn' : ''} onClick={lista('aprov')} />
         <Tile label="Em execução" value={n('exec')} onClick={lista('exec')} />

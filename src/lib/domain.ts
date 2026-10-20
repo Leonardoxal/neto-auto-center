@@ -29,6 +29,7 @@ export interface Atendimento {
   sit_fiscal: string; sit_financeira: string; arquivado: boolean
   enviado_em: string | null; aprovado_em: string | null; recusado_em: string | null; valor_aprovado: number | null
   inicio_em: string | null; concluido_em: string | null; criado_em: string; atualizado_em: string
+  na_oficina?: boolean; fora_desde?: string | null
   orcamento_revisoes?: Revisao[]; descontos?: Desconto[]; notas_fiscais?: Nota[]; esperas?: Espera[]
   movimentacoes?: Movimentacao[]; eventos?: Evento[]
 }
@@ -43,7 +44,7 @@ const TODOS: Perfil[] = PERFIS
 export const PERM = {
   entrada: GR, orcamento: GR, enviar: GR, desconto: G, aprovar: G, recusar: G, nota: G,
   saida: GR, editar: GR, corrigirData: G, arquivar: G, reabrir: G, comercial: GR, fiscal: G, financeira: G,
-  operacional: TODOS, mover: TODOS, locadora: GR, usuarios: ['Administrador'] as Perfil[], areas: ['Administrador'] as Perfil[],
+  operacional: TODOS, mover: TODOS, presenca: TODOS, locadora: GR, usuarios: ['Administrador'] as Perfil[], areas: ['Administrador'] as Perfil[],
   relatorios: G,
 } satisfies Record<string, Perfil[]>
 export type Acao = keyof typeof PERM
@@ -59,6 +60,26 @@ export const descontoSolicitado = (a: Atendimento) => sum((a.descontos ?? []).ma
 export const descontoConcedido = (a: Atendimento) => sum((a.descontos ?? []).map(d => +d.concedido))
 
 export const noPatio = (a: Atendimento) => a.sit_fisica === 'patio' && !a.arquivado
+/** atendimento ativo com o veículo fisicamente na oficina (e não com o condutor) */
+export const naOficina = (a: Atendimento) => noPatio(a) && a.na_oficina !== false
+export const comCondutor = (a: Atendimento) => noPatio(a) && a.na_oficina === false
+
+/** etapas do atendimento para a linha do tempo do pátio */
+export type Etapa = { t: string; feito: boolean; alerta?: 'o' | 'r'; sub?: string }
+export function etapas(a: Atendimento): Etapa[] {
+  const revs = (a.orcamento_revisoes ?? []).length > 0
+  const concl = !!a.concluido_em || a.sit_operacional === 'Serviço concluído'
+  return [
+    { t: 'Entrada', feito: true },
+    { t: 'Orçamento', feito: revs },
+    { t: 'Enviado', feito: !!a.enviado_em },
+    { t: a.recusado_em ? 'Recusado' : 'Aprovado', feito: !!a.aprovado_em || !!a.recusado_em, alerta: a.recusado_em ? 'r' : undefined },
+    { t: 'Execução', feito: !!a.inicio_em || concl, alerta: ESPERAS.includes(a.sit_operacional) ? 'o' : undefined, sub: ESPERAS.includes(a.sit_operacional) ? a.sit_operacional.replace('Aguardando ', 'Aguard. ') : undefined },
+    { t: 'Concluído', feito: concl },
+    { t: 'Faturado', feito: faturado(a) > 0, sub: faturado(a) > 0 && a.sit_fiscal === 'Parcialmente faturado' ? 'Parcial' : undefined },
+    { t: 'Entregue', feito: !!a.saida },
+  ]
+}
 export const ultimaAtualizacao = (a: Atendimento) => Math.max(T(a.atualizado_em) ?? 0, T(a.entrada) ?? 0, ...(a.eventos ?? []).map(e => T(e.em) ?? 0))
 export const semAtualizacao = (a: Atendimento, agora = Date.now()) => agora - ultimaAtualizacao(a)
 export const tempoNoPatio = (a: Atendimento, agora = Date.now()) => (T(a.saida) ?? agora) - (T(a.entrada) ?? agora)
@@ -70,6 +91,7 @@ export const alerta = (a: Atendimento, agora = Date.now()): '' | 'w' | 'c' => {
 
 export const LISTAS: Record<string, { t: string; f: (a: Atendimento) => boolean }> = {
   todos: { t: 'Todos', f: noPatio },
+  fora: { t: 'Com o condutor', f: a => comCondutor(a) },
   orc: { t: 'Aguardando orçamento', f: a => noPatio(a) && a.sit_comercial === 'Aguardando orçamento' },
   aprov: { t: 'Aguardando aprovação', f: a => noPatio(a) && ['Orçamento enviado', 'Aguardando aprovação', 'Em negociação'].includes(a.sit_comercial) },
   exec: { t: 'Em execução', f: a => noPatio(a) && a.sit_operacional === 'Em execução' },
