@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/lib/domain.test.ts","./src/lib/domain.ts","./src/lib/format.ts","./src/lib/store.tsx","./src/lib/supabase.ts","./src/screens/Cadastros.tsx","./src/screens/Entrada.tsx","./src/screens/Ficha.tsx","./src/screens/Patio.tsx","./src/screens/comum.tsx","./src/ui/ui.tsx"],"version":"5.6.3"}
