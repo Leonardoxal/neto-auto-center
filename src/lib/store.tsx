@@ -54,7 +54,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const lista = (u.data ?? []) as Usuario[]
     setMe(lista.find(x => x.id === uid) ?? null)
     setUsuarios(lista); setLocadoras((l.data ?? []) as Locadora[]); setAreas((ar.data ?? []) as Area[])
-    setAtivos((at.data ?? []) as Atendimento[])
+    const lista2 = (at.data ?? []) as Atendimento[]
+    if (lista2.length) {
+      const it = await supabase.from('orcamento_itens').select('*').in('atendimento_id', lista2.map(a => a.id)).order('seq')
+      if (!it.error) for (const a of lista2) a.orcamento_itens = (it.data ?? []).filter(i => i.atendimento_id === a.id)
+    }
+    setAtivos(lista2)
     setVersao(v => v + 1)
     setCarregando(false)
   }, [session])
@@ -68,6 +73,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const ch = supabase.channel('mudancas')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'atendimentos' }, agendar)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'eventos' }, agendar)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orcamento_itens' }, agendar)
       .subscribe()
     const vis = () => { if (document.visibilityState === 'visible') agendar() }
     document.addEventListener('visibilitychange', vis)

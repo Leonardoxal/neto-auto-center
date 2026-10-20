@@ -19,6 +19,19 @@ export interface Desconto { id: string; base: number; solicitado: number; conced
 export interface Movimentacao { id: string; origem: string; destino: string; em: string; obs: string; usuario: string | null }
 export interface Espera { id: string; motivo: string; inicio: string; fim: string | null }
 export interface Nota { id: string; tipo: string; numero: string; serie: string; valor: number; emissao: string; cancelada: boolean }
+export interface Item {
+  id: string; seq: number; atendimento_id: string; tipo: 'Peça' | 'Serviço' | 'Outro'; descricao: string; quantidade: number; valor_unitario: number
+  status: 'Proposto' | 'Aprovado' | 'Retirado'; motivo_retirada: string; obs: string; criado_em: string; criado_por_nome: string; alterado_em: string | null; alterado_por_nome: string
+}
+export const totalItem = (i: Item) => Math.round(+i.quantidade * +i.valor_unitario * 100) / 100
+export function resumoItens(itens: Item[] = []) {
+  const ativos = itens.filter(i => i.status !== 'Retirado')
+  return {
+    n: itens.length, ativos: ativos.length, total: ativos.reduce((s, i) => s + totalItem(i), 0),
+    aprovado: itens.filter(i => i.status === 'Aprovado').reduce((s, i) => s + totalItem(i), 0),
+    retirados: itens.filter(i => i.status === 'Retirado'), propostos: itens.filter(i => i.status === 'Proposto'),
+  }
+}
 export interface Evento { id: number; tipo: string; descricao: string; em: string; usuario_nome: string }
 
 export interface Atendimento {
@@ -30,7 +43,7 @@ export interface Atendimento {
   enviado_em: string | null; aprovado_em: string | null; recusado_em: string | null; valor_aprovado: number | null
   inicio_em: string | null; concluido_em: string | null; criado_em: string; atualizado_em: string
   na_oficina?: boolean; fora_desde?: string | null
-  orcamento_revisoes?: Revisao[]; descontos?: Desconto[]; notas_fiscais?: Nota[]; esperas?: Espera[]
+  orcamento_revisoes?: Revisao[]; descontos?: Desconto[]; notas_fiscais?: Nota[]; esperas?: Espera[]; orcamento_itens?: Item[]
   movimentacoes?: Movimentacao[]; eventos?: Evento[]
 }
 
@@ -53,7 +66,14 @@ export const pode = (perfil: Perfil | undefined, acao: Acao) => !!perfil && (PER
 // ---------- cálculos ----------
 const sum = (a: number[]) => a.reduce((s, x) => s + (+x || 0), 0)
 const bySeq = (a: Atendimento) => [...(a.orcamento_revisoes ?? [])].sort((x, y) => x.seq - y.seq)
-export const valorInicial = (a: Atendimento) => { const r = bySeq(a); return r.length ? +r[0].valor : null }
+/** valor inicial = o que foi enviado à locadora (última revisão até o envio); antes do envio, o valor atual em montagem */
+export const valorInicial = (a: Atendimento) => {
+  const r = bySeq(a); if (!r.length) return null
+  const env = T(a.enviado_em)
+  if (!env) return +r[r.length - 1].valor
+  const ate = r.filter(x => (T(x.em) ?? 0) <= env + 1000)
+  return +(ate.length ? ate[ate.length - 1] : r[0]).valor
+}
 export const valorAtual = (a: Atendimento) => { const r = bySeq(a); return r.length ? +r[r.length - 1].valor : null }
 export const faturado = (a: Atendimento) => sum((a.notas_fiscais ?? []).filter(n => !n.cancelada).map(n => +n.valor))
 export const descontoSolicitado = (a: Atendimento) => sum((a.descontos ?? []).map(d => +d.solicitado))

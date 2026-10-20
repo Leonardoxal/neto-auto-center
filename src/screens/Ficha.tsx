@@ -8,6 +8,8 @@ import { SEL_FICHA, useStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
 import { Field, Fg, Group, Ic, KV, Nav, Note, Pill, Plate, Section, Select, useSheet } from '../ui/ui'
 import { AtRow, Etapas, usePresenca, useNav } from './comum'
+import { AprovarItensCorpo, ItensOrcamento, acoesItens, lerAprovacao } from './Itens'
+import type { Item } from '../lib/domain'
 
 const agora = () => paraInputLocal(new Date())
 
@@ -15,6 +17,7 @@ export function Ficha({ id }: { id: string }) {
   const store = useStore(); const nav = useNav(); const sheet = useSheet(); const presenca = usePresenca()
   const [a, setA] = useState<Atendimento | null | undefined>(undefined)
   const [outros, setOutros] = useState<Atendimento[]>([])
+  const [itens, setItens] = useState<Item[]>([])
 
   useEffect(() => {
     let vivo = true
@@ -22,6 +25,7 @@ export function Ficha({ id }: { id: string }) {
       if (!vivo) return
       const data = d as unknown as Atendimento | null
       setA(data ?? null)
+      if (data) supabase.from('orcamento_itens').select('*').eq('atendimento_id', id).order('seq').then(r => vivo && setItens(r.error ? [] : (r.data ?? []) as Item[]))
       if (data) supabase.from('atendimentos').select('*').eq('placa', data.placa).neq('id', id).order('entrada', { ascending: false })
         .then(r => vivo && setOutros((r.data ?? []) as Atendimento[]))
     })
@@ -35,16 +39,18 @@ export function Ficha({ id }: { id: string }) {
   const run = (fn: string, args: Record<string, unknown>) => store.rpc(fn, { p_at: a.id, ...args })
   const areas = store.areas.filter(x => x.ativa).map(x => x.nome)
   const vi = valorInicial(a), va = valorAtual(a)
+  const temItens = itens.length > 0
+  const acItens = acoesItens(a, store, sheet)
 
   // ---------- ações ----------
   const acoes: [string, string, string, Acao | null, () => void][] = [
-    ['orc', 'Orçamento', 'edit', 'orcamento', () => sheet.open({
+    ['orc', temItens ? '+ Item' : 'Orçamento', 'edit', 'orcamento', () => temItens ? acItens.novo() : sheet.open({
       title: va == null ? 'Registrar orçamento' : 'Revisar orçamento', done: 'Orçamento registrado',
       body: <><Fg>{va != null && <Field label="Valor atual"><span className="muted">{brl(va)}</span></Field>}
         <Field label={va == null ? 'Valor' : 'Novo valor'}><input name="v" inputMode="decimal" placeholder="0,00" /></Field>
         <Field label="Data e hora"><input name="t" type="datetime-local" defaultValue={agora()} /></Field>
         <Field label="Observação" col><textarea name="obs" /></Field></Fg>
-        <Note>Cada revisão fica guardada. Nenhum valor anterior é apagado.</Note></>,
+        <Note>Cada revisão fica guardada. Nenhum valor anterior é apagado. Para detalhar peças e serviços, use <b>+ Item</b> na seção Itens do orçamento.</Note></>,
       onSave: f => { const v = numero(f.v); if (!v || v <= 0) return 'Informe um valor maior que zero.'; return run('registrar_orcamento', { p_valor: v, p_em: deInputLocal(f.t), p_obs: f.obs }) },
     })],
     ['enviar', 'Enviar', 'out', 'enviar', () => {
@@ -75,6 +81,10 @@ export function Ficha({ id }: { id: string }) {
     }],
     ['aprov', 'Aprovar', 'check', 'aprovar', () => {
       if (a.aprovado_em) { sheet.toast(`Já aprovado em ${fDataHora(a.aprovado_em)}.`); return }
+      if (itens.some(i => i.status === 'Proposto')) { sheet.open({ title: 'Aprovar orçamento', done: 'Aprovado. O veículo continua no pátio.',
+        body: <AprovarItensCorpo a={a} itens={itens} />,
+        onSave: f => { const r = lerAprovacao(f, itens); if (!r.aprovados.length) return 'Marque pelo menos um item aprovado.'
+          return run('aprovar_com_itens', { p_aprovados: r.aprovados, p_em: r.em, p_protocolo: r.protocolo, p_motivo: r.motivo }) } }); return }
       sheet.open({ title: 'Aprovar orçamento', done: 'Aprovado. O veículo continua no pátio.',
         body: <><Fg><Field label="Valor aprovado"><input name="v" inputMode="decimal" defaultValue={va != null ? va.toFixed(2).replace('.', ',') : ''} /></Field>
           <Field label="Aprovado em"><input name="t" type="datetime-local" defaultValue={agora()} /></Field><Field label="Protocolo"><input name="prot" defaultValue={a.protocolo} /></Field></Fg>
@@ -177,6 +187,7 @@ export function Ficha({ id }: { id: string }) {
       const ok = !p || store.pode(p)
       return <button key={k} className={`act ${ok ? '' : 'lock'}`} onClick={() => ok ? fn() : guard(p!)}><span className="ib"><Ic n={ok ? i : 'lock'} /></span>{l}</button>
     })}</div></section>
+    <ItensOrcamento a={a} itens={itens} />
     <div className="cols2"><div>
       <Section title="Situação" foot="As cinco situações são independentes. Um veículo pode estar no pátio, aprovado, em execução e faturado ao mesmo tempo.">
         <div className="group">{([['fisica', 'Física', noPatio(a) && a.na_oficina === false ? 'Com o condutor' : FISICA[a.sit_fisica] + (a.arquivado ? ' · arquivado' : '')], ['comercial', 'Comercial', a.sit_comercial], ['operacional', 'Operacional', a.sit_operacional], ['fiscal', 'Fiscal', a.sit_fiscal], ['financeira', 'Financeira', a.sit_financeira]] as const).map(([k, l, v]) =>

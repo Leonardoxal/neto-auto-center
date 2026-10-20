@@ -17,6 +17,7 @@ export function msgErro(e: unknown): string {
   if (/duplicate key.*notas_validas/i.test(m)) return 'Essa nota já está registrada neste atendimento.'
   if (/duplicate key.*areas_nome/i.test(m)) return 'Essa área já existe.'
   if (/marcar_presenca|na_oficina/i.test(m) && /not find|does not exist|schema cache/i.test(m)) return 'Falta rodar a atualização 0002 do banco no Supabase (SQL Editor). Veja o README.'
+  if (/(adicionar_item|aprovar_com_itens|retirar_item|editar_item|orcamento_itens)/i.test(m) && /not find|does not exist|schema cache/i.test(m)) return 'Falta rodar a atualização 0003 do banco no Supabase (SQL Editor). Veja o README.'
   if (/row-level security|permission denied/i.test(m)) return 'Seu perfil não tem permissão para isso.'
   return m
 }

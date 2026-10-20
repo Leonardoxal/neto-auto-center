@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import { alerta, comCondutor, etapas, FISICA, faturado as faturadoAt, noPatio, semAtualizacao, tempoNoPatio, type Atendimento } from '../lib/domain'
+import { alerta, comCondutor, etapas, FISICA, faturado as faturadoAt, resumoItens, noPatio, semAtualizacao, tempoNoPatio, type Atendimento } from '../lib/domain'
 import { brl, deInputLocal, dur, fData, fDataHora, paraInputLocal } from '../lib/format'
 import { useStore } from '../lib/store'
 import { Field, Fg, Ic, Note, Pill, Plate, useSheet } from '../ui/ui'
@@ -85,6 +85,11 @@ export function VCard({ a }: { a: Atendimento }) {
           {fora ? <span className="tag r">Fora da oficina · com o condutor{a.fora_desde ? ' desde ' + fData(a.fora_desde) : ''}</span> : <span className="tag">Na oficina · {a.local}</span>}
           {al && <span className={`tag ${al === 'c' ? 'r' : 'o'}`}>Parado há {dur(semAtualizacao(a))}</span>}
           {a.motivo_espera && <span className="tag o">{a.motivo_espera}</span>}
+          {(() => { const R = resumoItens(a.orcamento_itens); if (!R.n) return null
+            const comp = a.aprovado_em ? R.propostos.length : 0
+            return <><span className="tag">{R.ativos} {R.ativos === 1 ? 'item' : 'itens'} · {brl(R.total)}</span>
+              {R.retirados.length > 0 && <span className="tag">{R.retirados.length} retirado(s)</span>}
+              {comp > 0 && <span className="tag o">{comp} aguardando autorização</span>}</> })()}
         </div>
       </div>
       <div className="vmeta">

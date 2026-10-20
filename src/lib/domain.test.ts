@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alerta, faturado, LISTAS, normPlaca, placaValida, pode, tempoAprovacao, tempos, valorAtual, valorInicial, type Atendimento } from './domain'
+import { alerta, faturado, LISTAS, resumoItens, normPlaca, placaValida, pode, tempoAprovacao, tempos, valorAtual, valorInicial, type Atendimento } from './domain'
 import { deInputLocal, dur, numero, paraInputLocal } from './format'
 
 const H = 36e5, D = 864e5, AGORA = Date.parse('2026-10-20T15:00:00Z')
@@ -27,12 +27,24 @@ describe('orçamento', () => {
     expect(valorInicial(base())).toBeNull()
     expect(valorAtual(base())).toBeNull()
   })
-  it('mantém todas as revisões e usa a ordem de registro', () => {
-    const a = base({ orcamento_revisoes: [
-      { id: '2', seq: 2, valor: 2400, em: iso(2 * D), obs: 'Após negociação' },
-      { id: '1', seq: 1, valor: 2650, em: iso(1 * D), obs: 'Orçamento inicial' }] })
+  it('mantém todas as revisões e usa a ordem de registro; inicial = valor enviado', () => {
+    const a = base({ enviado_em: iso(2 * D), orcamento_revisoes: [
+      { id: '2', seq: 2, valor: 2400, em: iso(1 * D), obs: 'Após negociação' },
+      { id: '1', seq: 1, valor: 2650, em: iso(3 * D), obs: 'Orçamento inicial' }] })
     expect(valorInicial(a)).toBe(2650)
     expect(valorAtual(a)).toBe(2400)
+  })
+})
+
+describe('itens do orçamento', () => {
+  it('soma só o que não foi retirado e separa o aprovado', () => {
+    const it = (status: 'Proposto' | 'Aprovado' | 'Retirado', q: number, v: number) => ({ id: Math.random() + '', seq: 1, atendimento_id: 'a', tipo: 'Peça' as const, descricao: 'x', quantidade: q, valor_unitario: v, status, motivo_retirada: '', obs: '', criado_em: '', criado_por_nome: '', alterado_em: null, alterado_por_nome: '' })
+    const r = resumoItens([it('Aprovado', 1, 320), it('Aprovado', 2, 150), it('Retirado', 2, 250), it('Proposto', 1, 60)])
+    expect(r.total).toBe(680); expect(r.aprovado).toBe(620); expect(r.retirados.length).toBe(1)
+  })
+  it('antes do envio o valor inicial acompanha a montagem', () => {
+    const a = base({ orcamento_revisoes: [{ id: '1', seq: 1, valor: 300, em: iso(2 * D), obs: '' }, { id: '2', seq: 2, valor: 1100, em: iso(1 * D), obs: '' }] })
+    expect(valorInicial(a)).toBe(1100)
   })
 })
 
