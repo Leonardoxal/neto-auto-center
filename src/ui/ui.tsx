@@ -15,6 +15,7 @@ const P: Record<string, ReactNode> = {
   lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>,
   undo: <><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" /></>, out: <><path d="M10 4H5v16h5" /><path d="M16 16l4-4-4-4M20 12H9" /></>,
   x: <path d="M6 6l12 12M18 6L6 18" />, receipt: <><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6M9 16h3" /></>,
+  chart: <path d="M5 20V11M11 20V5M17 20v-7M3 20h18" />,
   more: <><circle cx="5" cy="12" r="1.6" fill="currentColor" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /><circle cx="19" cy="12" r="1.6" fill="currentColor" /></>,
 }
 export const Ic = ({ n, sm, className = '' }: { n: string; sm?: boolean; className?: string }) =>
