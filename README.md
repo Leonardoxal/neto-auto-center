@@ -5,6 +5,7 @@ Sistema interno da NETO AUTO CENTER (Tangará da Serra/MT) para controle de pát
 - **App:** React + TypeScript + Vite, instalável (PWA)
 - **Banco, login e permissões:** Supabase (plano gratuito)
 - **Hospedagem:** Vercel (plano gratuito)
+- **Endereço:** https://neto-auto-center.vercel.app
 
 ## Instalação (uma vez)
 
