@@ -122,16 +122,14 @@ function LancarCorpo({ holder, aprovado }: { holder: { linhas: Linha[]; files: F
   return <>
     {aprovado && <div className="hint warn">O orçamento já foi aprovado. As linhas novas entram como <b>aguardando autorização</b>.</div>}
     <div className="group" style={{ marginBottom: 10 }}>{linhas.map((l, i) =>
-      <div key={i} className="row" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-        <select aria-label="Tipo" value={l.tipo} onChange={e => upd(i, 'tipo', e.target.value)} style={{ border: 0, background: 'var(--fill)', borderRadius: 8, padding: '7px 6px', fontSize: 14 }}>
+      <div key={i} className="row lrow">
+        <select aria-label="Tipo" value={l.tipo} onChange={e => upd(i, 'tipo', e.target.value)} className="l-tipo">
           <option>Peça</option><option>Serviço</option><option>Outro</option></select>
-        <input aria-label="Descrição" placeholder={i === 0 ? 'Ex.: Orçamento peças nº 1201' : 'Descrição'} value={l.desc} onChange={e => upd(i, 'desc', e.target.value)}
-          style={{ flex: '1 1 180px', minWidth: 0, border: 0, background: 'transparent', fontSize: 16, padding: '8px 0', outline: 'none' }} />
-        <input aria-label="Quantidade" inputMode="decimal" value={l.qtd} onChange={e => upd(i, 'qtd', e.target.value)} title="Quantidade"
-          style={{ width: 44, border: 0, background: 'var(--fill)', borderRadius: 8, padding: '7px 6px', fontSize: 15, textAlign: 'center' }} />
-        <input aria-label="Valor" inputMode="decimal" placeholder="R$ 0,00" value={l.valor} onChange={e => upd(i, 'valor', e.target.value)}
-          style={{ width: 110, border: 0, background: 'var(--fill)', borderRadius: 8, padding: '7px 8px', fontSize: 16, textAlign: 'right' }} />
-        {linhas.length > 1 && <button type="button" className="tbtn" aria-label="Remover linha" onClick={() => setLinhas(L => { const n = L.filter((_, j) => j !== i); holder.linhas = n; return n })}><Ic n="x" sm /></button>}
+        <input aria-label="Descrição" placeholder={i === 0 ? 'Ex.: Orçamento peças nº 1201' : 'Descrição'} value={l.desc} onChange={e => upd(i, 'desc', e.target.value)} className="l-desc" />
+        <span className="l-x">×</span>
+        <input aria-label="Quantidade" inputMode="decimal" value={l.qtd} onChange={e => upd(i, 'qtd', e.target.value)} title="Quantidade" className="l-qtd" />
+        <input aria-label="Valor" inputMode="decimal" placeholder="R$ 0,00" value={l.valor} onChange={e => upd(i, 'valor', e.target.value)} className="l-val" />
+        {linhas.length > 1 ? <button type="button" className="tbtn l-del" aria-label="Remover linha" onClick={() => setLinhas(L => { const n = L.filter((_, j) => j !== i); holder.linhas = n; return n })}><Ic n="x" sm /></button> : <span className="l-del" />}
       </div>)}</div>
     <div className="btnrow" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
       <button type="button" className="btn ghost sm" onClick={() => setLinhas(L => { const n = [...L, vazia(L[L.length - 1]?.tipo)]; holder.linhas = n; return n })}><Ic n="plus" sm /> Linha</button>
