@@ -8,11 +8,12 @@ import { Inicio, Parados, Patio } from './screens/Patio'
 import { Ficha } from './screens/Ficha'
 import { Cadastros, Historico, LocadoraFicha } from './screens/Cadastros'
 import { Relatorios } from './screens/Relatorios'
+import { Notas } from './screens/Notas'
 
 const MENU_TODOS: [string, string, string][] = [
-  ['inicio', 'Início', 'grid'], ['patio', 'Pátio ativo', 'car'], ['rel', 'Relatórios', 'chart'], ['hist', 'Histórico de veículos', 'clock'], ['cad', 'Cadastros e configurações', 'gear'],
+  ['inicio', 'Início', 'grid'], ['patio', 'Pátio ativo', 'car'], ['notas', 'Notas fiscais', 'receipt'], ['rel', 'Relatórios', 'chart'], ['hist', 'Histórico de veículos', 'clock'], ['cad', 'Cadastros e configurações', 'gear'],
 ]
-const TABS_TODOS: [string, string, string][] = [['inicio', 'Início', 'grid'], ['patio', 'Pátio', 'car'], ['rel', 'Relatórios', 'chart'], ['hist', 'Histórico', 'clock'], ['cad', 'Cadastros', 'gear']]
+const FIN = ['notas', 'rel']
 
 function Login() {
   const [email, setEmail] = useState(''); const [senha, setSenha] = useState('')
@@ -84,10 +85,15 @@ export default function App() {
   else if (top?.r === 'loc') tela = <LocadoraFicha key={top.id} id={top.id!} />
   else if (top?.r === 'parados') tela = <Parados dias={+top.id!} />
   else if (top?.r === 'patio') tela = <Patio key={top.id} lista={top.id && LISTAS[top.id] ? top.id : 'todos'} onBack={nav.back} />
-  else tela = tab === 'patio' ? <Patio /> : tab === 'hist' ? <Historico /> : tab === 'cad' ? <Cadastros /> : tab === 'rel' && store.pode('relatorios') ? <Relatorios /> : <Inicio />
-  const MENU = MENU_TODOS.filter(m => m[0] !== 'rel' || store.pode('relatorios'))
-  const TABS = TABS_TODOS.filter(m => m[0] !== 'rel' || store.pode('relatorios'))
-  const cur = top ? (top.r === 'patio' ? 'patio' : tab) : tab
+  const gerente = store.pode('relatorios')
+  const MENU = MENU_TODOS.filter(m => !FIN.includes(m[0]) || gerente)
+  const TABS: [string, string, string][] = gerente
+    ? [['inicio', 'Início', 'grid'], ['patio', 'Pátio', 'car'], ['notas', 'Notas', 'receipt'], ['rel', 'Relatórios', 'chart'], ['mais', 'Mais', 'more']]
+    : [['inicio', 'Início', 'grid'], ['patio', 'Pátio', 'car'], ['hist', 'Histórico', 'clock'], ['cad', 'Cadastros', 'gear']]
+  if (!tela) tela = tab === 'patio' ? <Patio /> : tab === 'hist' ? <Historico /> : tab === 'cad' ? <Cadastros /> : tab === 'rel' && gerente ? <Relatorios />
+    : tab === 'notas' && gerente ? <Notas /> : tab === 'mais' ? <Mais itens={MENU.filter(m => !TABS.some(t => t[0] === m[0]))} go={nav.go} /> : <Inicio />
+  const cur0 = top ? (top.r === 'patio' ? 'patio' : tab) : tab
+  const cur = !largo && !TABS.some(t => t[0] === cur0) ? 'mais' : cur0
   const nPatio = store.ativos.length
 
   return <NavCtx.Provider value={nav}>
@@ -101,4 +107,18 @@ export default function App() {
     {!largo && <nav id="tabs" aria-label="Abas" style={{ gridTemplateColumns: `repeat(${TABS.length},1fr)` }}>{TABS.map(([t, l, i]) =>
       <button key={t} aria-current={cur === t ? 'page' : undefined} onClick={() => nav.go(t)}><Ic n={i} /><span>{l}</span></button>)}</nav>}
   </NavCtx.Provider>
+}
+
+function Mais({ itens, go }: { itens: [string, string, string][]; go: (t: string) => void }) {
+  const store = useStore()
+  return <>
+    <div className="navbar"><div className="nb-in"><Brand /><span /><span /></div></div>
+    <header className="large"><h1>Mais</h1></header>
+    <section className="sec"><div className="group">
+      <button className="row" onClick={() => go('cad')}><span className="avatar">{store.me?.nome[0]?.toUpperCase()}</span>
+        <div className="rm"><b>{store.me?.nome}</b><span className="r2">{store.me?.perfil}</span></div><Ic n="chev" className="chev" /></button>
+    </div></section>
+    <section className="sec"><div className="group">{itens.map(([t, l, i]) =>
+      <button key={t} className="row" onClick={() => go(t)}><span style={{ color: 'var(--red)' }}><Ic n={i} /></span><span className="rm">{l}</span><Ic n="chev" className="chev" /></button>)}</div></section>
+  </>
 }
