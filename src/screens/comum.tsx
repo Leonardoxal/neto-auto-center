@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 import { alerta, comCondutor, etapas, FISICA, faturado as faturadoAt, resumoItens, noPatio, semAtualizacao, tempoNoPatio, type Atendimento } from '../lib/domain'
 import { brl, deInputLocal, dur, fData, fDataHora, paraInputLocal } from '../lib/format'
 import { useStore } from '../lib/store'
@@ -29,6 +29,42 @@ export function AtRow({ a, right }: { a: Atendimento; right?: ReactNode }) {
 
 export const Lista = ({ itens, vazio }: { itens: Atendimento[]; vazio: string }) =>
   <div className="group">{itens.length ? itens.map(a => <AtRow key={a.id} a={a} />) : <div className="empty">{vazio}</div>}</div>
+
+// ---------- modelo do veículo: adicionar depois da entrada ----------
+
+function CorpoModelo({ inicial }: { inicial: string }) {
+  const [m, setM] = useState(inicial)
+  return <>
+    <Fg><Field label="Modelo"><input id="f_modelo" name="modelo" autoFocus placeholder="Ex.: Strada, Saveiro, Hilux" value={m} onChange={e => setM(e.target.value)} /></Field></Fg>
+    {m.trim() && <div className="hint"><CarroImg modelo={m} grande credito /></div>}
+    <Note>Fica registrado no histórico do atendimento.</Note>
+  </>
+}
+
+export function useModelo() {
+  const store = useStore(); const sheet = useSheet()
+  return (a: Atendimento) => {
+    if (!store.pode('editar')) { sheet.toast(`O perfil ${store.me?.perfil} não pode alterar o modelo.`); return }
+    sheet.open({
+      title: a.modelo ? 'Alterar modelo' : 'Adicionar modelo', saveLabel: 'Salvar', done: 'Modelo salvo',
+      body: <CorpoModelo inicial={a.modelo} />,
+      onSave: f => {
+        const modelo = f.modelo?.trim() ?? ''
+        if (!modelo) return 'Informe o modelo do veículo.'
+        if (modelo === a.modelo) return
+        return store.rpc('editar_atendimento', { p_at: a.id, p: { modelo } })
+      },
+    })
+  }
+}
+
+/** "Modelo não informado" vira botão para adicionar; com modelo, mostra o nome. */
+export function NomeModelo({ a, forte }: { a: Atendimento; forte?: boolean }) {
+  const { pode: podeFn } = useStore(); const modelo = useModelo()
+  if (a.modelo) return forte ? <b>{a.modelo}</b> : <>{a.modelo}</>
+  if (!podeFn('editar')) return forte ? <b>Modelo não informado</b> : <>Modelo não informado</>
+  return <button type="button" className="tbtn addmod" onClick={e => { e.stopPropagation(); modelo(a) }}>+ Adicionar modelo</button>
+}
 
 // ---------- presença: veículo na oficina ou com o condutor ----------
 
@@ -80,7 +116,7 @@ export function VCard({ a }: { a: Atendimento }) {
       <CarroImg modelo={a.modelo} />
       <div className="vbody">
       <div className="vtit">
-        <div className="l1"><b>{a.modelo || 'Modelo não informado'}</b><Plate p={a.placa} />
+        <div className="l1"><NomeModelo a={a} forte /><Plate p={a.placa} />
           {a.os ? <span className="ndoc os">{a.os}</span> : <span className="ndoc at">{a.numero}</span>}</div>
         <div className="chips">
           {fat > 0 ? <span className="tag g">Nota emitida · {brl(fat)}</span> : <span className="tag">Sem nota</span>}

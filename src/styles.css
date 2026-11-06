@@ -417,4 +417,5 @@ textarea.csv{width:100%;min-height:220px;font-family:var(--mono);font-size:12px;
 .step.done .c{background:var(--sec);border-color:var(--sec);color:var(--bg)}
 .step.cur .c{border-color:var(--red);box-shadow:var(--neon)}
 .vcard{border-left:3px solid var(--edge)}
+.tbtn.addmod{padding:0;min-height:0;font-size:15px;font-weight:600}
 .plate{border-radius:2px}

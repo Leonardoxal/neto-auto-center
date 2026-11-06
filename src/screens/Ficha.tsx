@@ -7,7 +7,7 @@ import { brl, deInputLocal, dur, fData, fDataHora, fHora, numero, paraInputLocal
 import { SEL_FICHA, useStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
 import { CarroImg, Field, Fg, Group, Ic, KV, Nav, Note, Pill, Plate, Section, Select, useSheet } from '../ui/ui'
-import { AtRow, Etapas, usePresenca, useNav } from './comum'
+import { AtRow, Etapas, NomeModelo, useModelo, usePresenca, useNav } from './comum'
 import { AprovarItensCorpo, ItensOrcamento, acoesItens, lerAprovacao } from './Itens'
 import type { Item } from '../lib/domain'
 import type { Anexo } from '../lib/anexos'
@@ -16,7 +16,7 @@ import { AnexosSecao } from './Anexos'
 const agora = () => paraInputLocal(new Date())
 
 export function Ficha({ id }: { id: string }) {
-  const store = useStore(); const nav = useNav(); const sheet = useSheet(); const presenca = usePresenca()
+  const store = useStore(); const nav = useNav(); const sheet = useSheet(); const presenca = usePresenca(); const modelo = useModelo()
   const [a, setA] = useState<Atendimento | null | undefined>(undefined)
   const [outros, setOutros] = useState<Atendimento[]>([])
   const [itens, setItens] = useState<Item[]>([])
@@ -170,7 +170,7 @@ export function Ficha({ id }: { id: string }) {
   return <>
     <Nav title="" onBack={nav.back} />
     <div className="fhead"><CarroImg modelo={a.modelo} grande credito /><Plate p={a.placa} lg />
-      <div className="sub">{a.modelo || 'Modelo não informado'} · <button className="tbtn" style={{ display: 'inline', padding: 0, minHeight: 0, fontSize: 'inherit' }} onClick={() => nav.push({ r: 'loc', id: a.locadora_id })}>{store.locNome(a.locadora_id)}</button> · {a.numero}</div>
+      <div className="sub"><NomeModelo a={a} />{a.modelo && store.pode('editar') && <> <button className="tbtn" style={{ display: 'inline', padding: 0, minHeight: 0, fontSize: 'inherit' }} onClick={() => modelo(a)}>(alterar)</button></>} · <button className="tbtn" style={{ display: 'inline', padding: 0, minHeight: 0, fontSize: 'inherit' }} onClick={() => nav.push({ r: 'loc', id: a.locadora_id })}>{store.locNome(a.locadora_id)}</button> · {a.numero}</div>
       {outros.length > 0 && <div className="muted sm">{outros.length} outro(s) atendimento(s) desta placa no histórico.</div>}
     </div>
     <section className="sec"><div className="group" style={{ padding: '12px 10px 8px' }}><Etapas a={a} /></div>
