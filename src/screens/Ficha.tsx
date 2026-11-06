@@ -6,7 +6,7 @@ import {
 import { brl, deInputLocal, dur, fData, fDataHora, fHora, numero, paraInputLocal, pct } from '../lib/format'
 import { SEL_FICHA, useStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
-import { Field, Fg, Group, Ic, KV, Nav, Note, Pill, Plate, Section, Select, useSheet } from '../ui/ui'
+import { CarroImg, Field, Fg, Group, Ic, KV, Nav, Note, Pill, Plate, Section, Select, useSheet } from '../ui/ui'
 import { AtRow, Etapas, usePresenca, useNav } from './comum'
 import { AprovarItensCorpo, ItensOrcamento, acoesItens, lerAprovacao } from './Itens'
 import type { Item } from '../lib/domain'
@@ -169,7 +169,7 @@ export function Ficha({ id }: { id: string }) {
 
   return <>
     <Nav title="" onBack={nav.back} />
-    <div className="fhead"><Plate p={a.placa} lg />
+    <div className="fhead"><CarroImg modelo={a.modelo} grande credito /><Plate p={a.placa} lg />
       <div className="sub">{a.modelo || 'Modelo não informado'} · <button className="tbtn" style={{ display: 'inline', padding: 0, minHeight: 0, fontSize: 'inherit' }} onClick={() => nav.push({ r: 'loc', id: a.locadora_id })}>{store.locNome(a.locadora_id)}</button> · {a.numero}</div>
       {outros.length > 0 && <div className="muted sm">{outros.length} outro(s) atendimento(s) desta placa no histórico.</div>}
     </div>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { tom } from '../lib/domain'
+import { identificarModelo, paginaImagem, urlImagem } from '../lib/veiculos'
 
 // ---------- ícones ----------
 const P: Record<string, ReactNode> = {
@@ -25,6 +26,17 @@ export const Ic = ({ n, sm, className = '' }: { n: string; sm?: boolean; classNa
 export const Pill = ({ s }: { s: string }) => <span className={`pill ${tom(s)}`}>{s}</span>
 export const Plate = ({ p, lg }: { p: string; lg?: boolean }) =>
   <span className={`plate ${lg ? 'lg' : ''}`} aria-label={`Placa ${p}`}><span>{p}</span></span>
+/** Foto ilustrativa do modelo (não do carro do cliente). Modelo desconhecido ou foto fora do ar: espaço reservado. */
+export function CarroImg({ modelo, grande, credito }: { modelo: string; grande?: boolean; credito?: boolean }) {
+  const m = identificarModelo(modelo)
+  const [falhou, setFalhou] = useState('')
+  if (!m || falhou === m.arquivo) return <div className={`carimg vazio ${grande ? 'g' : ''}`} aria-hidden="true"><Ic n="car" /></div>
+  return <figure className={`carimg ${grande ? 'g' : ''}`} title={`Foto ilustrativa: ${m.nome}`}>
+    <img src={urlImagem(m.arquivo, grande ? 640 : 320)} alt={`Foto ilustrativa de um ${m.nome}`} loading="lazy" onError={() => setFalhou(m.arquivo)} />
+    {credito && <figcaption>Foto ilustrativa · {m.nome} · <a href={paginaImagem(m.arquivo)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>Wikimedia Commons</a></figcaption>}
+  </figure>
+}
+
 export const Brand = () => <span className="brand"><i>N</i>NETO AUTO CENTER</span>
 
 export function Nav({ title, sub, onBack, backLabel = 'Voltar', right }: { title: string; sub?: ReactNode; onBack?: () => void; backLabel?: string; right?: ReactNode }) {

@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react'
 import { alerta, comCondutor, etapas, FISICA, faturado as faturadoAt, resumoItens, noPatio, semAtualizacao, tempoNoPatio, type Atendimento } from '../lib/domain'
 import { brl, deInputLocal, dur, fData, fDataHora, paraInputLocal } from '../lib/format'
 import { useStore } from '../lib/store'
-import { Field, Fg, Ic, Note, Pill, Plate, useSheet } from '../ui/ui'
+import { CarroImg, Field, Fg, Ic, Note, Pill, Plate, useSheet } from '../ui/ui'
 
 export type Rota = { r: 'at'; id: string } | { r: 'loc'; id: string } | { r: string; id?: string }
 export const NavCtx = createContext<{ push: (r: Rota) => void; back: () => void; go: (t: string) => void }>({ push: () => {}, back: () => {}, go: () => {} })
@@ -77,6 +77,8 @@ export function VCard({ a }: { a: Atendimento }) {
   const abrir = () => nav.push({ r: 'at', id: a.id })
   return <div className="vcard" role="button" tabIndex={0} onClick={abrir} onKeyDown={e => { if (e.key === 'Enter') abrir() }}>
     <div className="vtop">
+      <CarroImg modelo={a.modelo} />
+      <div className="vbody">
       <div className="vtit">
         <div className="l1"><b>{a.modelo || 'Modelo não informado'}</b><Plate p={a.placa} />
           {a.os ? <span className="ndoc os">{a.os}</span> : <span className="ndoc at">{a.numero}</span>}</div>
@@ -98,6 +100,7 @@ export function VCard({ a }: { a: Atendimento }) {
         {a.condutor && <span>{a.condutor}</span>}
         <span>Entrada {fDataHora(a.entrada)} · <b>{dur(tempoNoPatio(a))}</b></span>
         {a.responsavel && <span>Resp.: {a.responsavel}</span>}
+      </div>
       </div>
     </div>
     <Etapas a={a} />

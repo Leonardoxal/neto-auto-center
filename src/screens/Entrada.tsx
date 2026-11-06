@@ -3,10 +3,10 @@ import { normPlaca, placaValida, TIPOS_CLIENTE, noPatio, type Atendimento } from
 import { deInputLocal, fData, numero, paraInputLocal } from '../lib/format'
 import { supabase, msgErro } from '../lib/supabase'
 import { useStore } from '../lib/store'
-import { Field, Fg, Note, Select, useSheet } from '../ui/ui'
+import { CarroImg, Field, Fg, Note, Select, useSheet } from '../ui/ui'
 import { useNav } from './comum'
 
-function DicaPlaca({ placa }: { placa: string }) {
+function DicaPlaca({ placa, usarModelo }: { placa: string; usarModelo: (m: string) => void }) {
   const { locNome } = useStore()
   const [hist, setHist] = useState<Atendimento[] | null>(null)
   const p = normPlaca(placa)
@@ -26,16 +26,14 @@ function DicaPlaca({ placa }: { placa: string }) {
       ? <span><b>Possível duplicidade.</b> {p} já está no pátio no atendimento {ativo.numero}, desde {fData(ativo.entrada)}. Salvar cria um atendimento novo e separado.</span>
       : <span>{hist.length} atendimento(s) anterior(es). Último: {fData(ult.entrada)} · {locNome(ult.locadora_id)}{ult.servico ? ' · ' + ult.servico : ''}</span>}
     <span className="muted sm">Dados de atendimentos anteriores não são copiados automaticamente.</span>
-    {ult.modelo && <div><button type="button" className="btn ghost sm" onClick={() => {
-      const m = document.getElementById('f_modelo') as HTMLInputElement | null
-      if (m) { m.value = ult.modelo; (m.closest('details') as HTMLDetailsElement).open = true }
-    }}>Usar modelo: {ult.modelo}</button></div>}
+    {ult.modelo && <div><button type="button" className="btn ghost sm" onClick={() => usarModelo(ult.modelo)}>Usar modelo: {ult.modelo}</button></div>}
   </div>
 }
 
 function CorpoEntrada() {
   const { locadoras, areas, usuarios, me } = useStore()
   const [placa, setPlaca] = useState('')
+  const [modelo, setModelo] = useState('')
   const ativas = locadoras.filter(l => l.ativo)
   const [nova, setNova] = useState(ativas.length === 0)
   return <>
@@ -48,13 +46,14 @@ function CorpoEntrada() {
       <Field label="Entrada"><input id="f_entrada" name="entrada" type="datetime-local" defaultValue={paraInputLocal(new Date())} /></Field>
       <Field label="Placa"><input id="f_placa" name="placa" placeholder="ABC1D23" maxLength={8} autoCapitalize="characters" value={placa}
         onChange={e => setPlaca(e.target.value.toUpperCase())} style={{ fontFamily: 'var(--mono)', letterSpacing: '.06em' }} /></Field>
+      <Field label="Modelo"><input id="f_modelo" name="modelo" placeholder="Ex.: Strada, Saveiro, Hilux" value={modelo} onChange={e => setModelo(e.target.value)} /></Field>
       <Field label="Valor do orçamento"><input id="f_valor" name="valor" inputMode="decimal" placeholder="Pendente" /></Field>
     </Fg>
-    <DicaPlaca placa={placa} />
+    {modelo.trim() && <div className="hint"><CarroImg modelo={modelo} grande credito /></div>}
+    <DicaPlaca placa={placa} usarModelo={setModelo} />
     <Note>Sem valor, o orçamento fica pendente, nunca R$ 0,00. A data e a hora vêm do relógio da oficina.</Note>
     <details className="more"><summary>Mais informações (opcional)</summary>
       <Fg>
-        <Field label="Marca e modelo"><input id="f_modelo" name="modelo" /></Field>
         <Field label="Ordem de serviço"><input id="f_os" name="os" /></Field>
         <Field label="Protocolo da locadora"><input id="f_protocolo" name="protocolo" /></Field>
         <Field label="Recebido por"><Select name="responsavel" options={usuarios.filter(u => u.ativo).map(u => u.nome)} value={me?.nome} /></Field>
@@ -76,6 +75,7 @@ export function useEntrada() {
       async onSave(f) {
         const placa = normPlaca(f.placa)
         if (!placaValida(placa)) return 'Informe uma placa válida, como ABC1D23 ou ABC1234.'
+        if (!f.modelo?.trim()) return 'Informe o modelo do veículo.'
         let loc = f.loc
         if (f.nl_nome?.trim()) {
           const nome = f.nl_nome.trim().toUpperCase()

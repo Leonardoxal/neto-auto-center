@@ -289,6 +289,15 @@ textarea.csv{width:100%;min-height:220px;font-family:var(--mono);font-size:12px;
 
 /* ---------- celular: proporções ---------- */
 .fhead .plate{align-self:flex-start}
+.carimg{margin:0;flex:0 0 auto;width:112px;display:flex;flex-direction:column;gap:4px}
+.carimg img,.carimg.vazio{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:8px;background:var(--fill);display:block}
+.carimg.vazio{width:112px;display:flex;align-items:center;justify-content:center;color:var(--ter)}
+.carimg.g,.carimg.g.vazio{width:min(100%,360px)}
+.carimg figcaption{font-size:11.5px;color:var(--sec)}
+.carimg figcaption a{color:inherit;text-decoration:underline}
+.vcard .vtop{flex-wrap:nowrap}
+.vcard .vtop>.vbody{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between;flex:1;min-width:0}
+@media (max-width:560px){.carimg,.carimg.vazio{width:84px}}
 @media (max-width:560px){
   body{font-size:15px}
   .large{padding:2px 0 6px}
