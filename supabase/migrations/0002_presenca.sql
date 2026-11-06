@@ -22,7 +22,7 @@ begin
 end $$;
 
 -- a saída definitiva zera o estado "fora"
-create or replace function public._limpa_presenca() returns trigger language plpgsql as $$
+create or replace function public._limpa_presenca() returns trigger language plpgsql set search_path = public as $$
 begin
   if new.sit_fisica <> 'patio' then new.na_oficina := false; new.fora_desde := null; end if;
   if new.sit_fisica = 'patio' and old.sit_fisica <> 'patio' then new.na_oficina := true; end if;
@@ -31,3 +31,8 @@ end $$;
 drop trigger if exists limpa_presenca on public.atendimentos;
 create trigger limpa_presenca before update of sit_fisica on public.atendimentos
   for each row execute function public._limpa_presenca();
+
+-- só usuários logados; a função do gatilho não é chamável pelo app
+revoke execute on function public._limpa_presenca() from public, anon, authenticated;
+revoke execute on function public.marcar_presenca(uuid,boolean,timestamptz,text) from public, anon;
+grant execute on function public.marcar_presenca(uuid,boolean,timestamptz,text) to authenticated, service_role;
