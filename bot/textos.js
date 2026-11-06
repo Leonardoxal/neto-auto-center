@@ -34,13 +34,16 @@ const CABECALHO = 'NETO AUTO CENTER'
 
 // grupos do pátio (os mesmos critérios do painel)
 const EM_APROVACAO = ['Orçamento enviado', 'Aguardando aprovação', 'Em negociação']
+const pronto = v => v.sit_operacional === 'Serviço concluído'
 export const grupos = vs => ({
   orcamento: vs.filter(v => v.sit_comercial === 'Aguardando orçamento'),
   aprovacao: vs.filter(v => EM_APROVACAO.includes(v.sit_comercial)),
+  aprovados: vs.filter(v => v.sit_comercial === 'Aprovado' && !pronto(v)),
   execucao: vs.filter(v => v.sit_operacional === 'Em execução'),
   pecas: vs.filter(v => v.sit_operacional === 'Aguardando peças'),
-  prontos: vs.filter(v => v.sit_operacional === 'Serviço concluído'),
+  prontos: vs.filter(pronto),
 })
+const valorEsituacao = v => ` — ${brl(v.valor)} · ${v.sit_operacional}`
 const porPermanencia = (vs, agora) => [...vs].sort((a, b) => (agora - T(b.entrada)) - (agora - T(a.entrada)))
 
 function atencao(vs, agora) {
@@ -56,8 +59,9 @@ function atencao(vs, agora) {
 
 export const ajuda = () => [
   CABECALHO, 'Comandos:', '',
-  'PATIO — veículos na oficina',
-  'PENDENTES — aguardando aprovação',
+  'PATIO — veículos na oficina, separados por situação',
+  'PENDENTES — falta aprovar',
+  'APROVADOS — aprovados, ainda em serviço',
   'PRONTOS — serviço finalizado, aguardando entrega',
   'STATUS ABC1D23 — situação de um veículo',
   'ABC1D23 FINALIZADO — registrar serviço finalizado',
@@ -65,10 +69,24 @@ export const ajuda = () => [
   '', 'No lugar da placa pode usar o modelo (ex.: HILUX FINALIZADO). Toda alteração pede confirmação.',
 ].join('\n')
 
+/** Pátio separado por situação. Cada veículo aparece uma vez; o que não se encaixa vai em OUTROS. */
 export function patio(vs, agora = Date.now()) {
-  return [CABECALHO, `NO PÁTIO: ${vs.length}`, '', ...lista(porPermanencia(vs, agora), v => ` (${dur(agora - T(v.entrada))})`)].join('\n')
+  const g = grupos(vs)
+  const tempo = v => ` (${dur(agora - T(v.entrada))})`
+  const secoes = [
+    ['FALTA ORÇAMENTO', g.orcamento.filter(v => !pronto(v)), tempo],
+    ['FALTA APROVAR', g.aprovacao.filter(v => !pronto(v)), v => ` — ${brl(v.valor)}${tempo(v)}`],
+    ['APROVADOS', g.aprovados, valorEsituacao],
+    ['PRONTOS PARA ENTREGA', g.prontos, () => ''],
+  ]
+  const usados = new Set(secoes.flatMap(s => s[1]))
+  const outros = vs.filter(v => !usados.has(v))
+  if (outros.length) secoes.push(['OUTROS', outros, v => ` — ${v.sit_comercial}`])
+  return [CABECALHO, `NO PÁTIO: ${vs.length}`,
+    ...secoes.flatMap(([t, L, extra]) => ['', `${t}: ${L.length}`, ...lista(porPermanencia(L, agora), extra)])].join('\n')
 }
-export const pendentes = vs => [CABECALHO, `AGUARDANDO APROVAÇÃO: ${grupos(vs).aprovacao.length}`, '', ...lista(grupos(vs).aprovacao, v => ` — ${brl(v.valor)}`)].join('\n')
+export const pendentes = vs => [CABECALHO, `FALTA APROVAR: ${grupos(vs).aprovacao.length}`, '', ...lista(grupos(vs).aprovacao, v => ` — ${brl(v.valor)}`)].join('\n')
+export const aprovados = vs => [CABECALHO, `APROVADOS: ${grupos(vs).aprovados.length}`, '', ...lista(grupos(vs).aprovados, valorEsituacao)].join('\n')
 export const prontos = vs => [CABECALHO, `PRONTOS PARA ENTREGA: ${grupos(vs).prontos.length}`, '', ...lista(grupos(vs).prontos)].join('\n')
 
 export function status(v, agora = Date.now()) {
@@ -104,7 +122,8 @@ export function relatorioManha(vs, agora = Date.now()) {
     CABECALHO, `RELATÓRIO DO PÁTIO — ${fData(agora)}`, 'Bom dia!', '',
     `VEÍCULOS NO PÁTIO: ${vs.length}`, '',
     `AGUARDANDO ORÇAMENTO: ${g.orcamento.length}`, ...lista(g.orcamento), '',
-    `AGUARDANDO APROVAÇÃO: ${g.aprovacao.length}`, ...lista(g.aprovacao), '',
+    `FALTA APROVAR: ${g.aprovacao.length}`, ...lista(g.aprovacao, v => ` — ${brl(v.valor)}`), '',
+    `APROVADOS: ${g.aprovados.length}`, ...lista(g.aprovados, valorEsituacao), '',
     `EM EXECUÇÃO: ${g.execucao.length}`, ...lista(g.execucao), '',
     `AGUARDANDO PEÇAS: ${g.pecas.length}`, ...lista(g.pecas), '',
     `PRONTOS PARA ENTREGA: ${g.prontos.length}`, ...lista(g.prontos),
@@ -140,9 +159,10 @@ export function relatorioFim(noPatio, doDia, agora = Date.now()) {
 }
 
 // avisos imediatos, a partir de um evento do histórico
-export const avisoAprovado = (v, ev) => [CABECALHO, 'ORÇAMENTO APROVADO', '',
+export const avisoAprovado = (v, ev, nAnexos = 0) => [CABECALHO, 'ORÇAMENTO APROVADO', '',
   `Veículo: ${v.modelo?.trim() || 'Modelo não informado'}`, `Placa: ${v.placa}`, `Cliente: ${v.cliente || '—'}`,
-  `Valor: ${brl(v.valor)}`, `Aprovado por: ${ev.usuario_nome || '—'}`, `Horário: ${fHora(ev.em)}`].join('\n')
+  `Serviço: ${v.servico?.trim() || '—'}`, `Valor: ${brl(v.valor)}`, `Aprovado por: ${ev.usuario_nome || '—'}`, `Horário: ${fHora(ev.em)}`,
+  '', nAnexos ? `Orçamento anexado: ${nAnexos} arquivo(s) a seguir.` : 'Nenhum orçamento anexado no painel.'].join('\n')
 export const avisoFinalizado = (v, ev) => [CABECALHO, 'SERVIÇO FINALIZADO', '',
   `Veículo: ${v.modelo?.trim() || 'Modelo não informado'}`, `Placa: ${v.placa}`, `Serviço: ${v.servico?.trim() || '—'}`,
   `Responsável pela atualização: ${ev.usuario_nome || '—'}`, `Horário: ${fHora(ev.em)}`, 'Situação: aguardando entrega.'].join('\n')

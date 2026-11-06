@@ -58,9 +58,26 @@ async function jidDe(telefone) {
   }
   return jids.get(telefone)
 }
-async function enviar(telefones, texto) {
+async function enviar(telefones, conteudo) {
+  const msg = typeof conteudo === 'string' ? { text: conteudo } : conteudo
   for (const t of telefones) {
-    try { await sock.sendMessage(await jidDe(t), { text: texto }) } catch (e) { log('falha ao enviar para', t, e.message) }
+    try { await sock.sendMessage(await jidDe(t), msg) } catch (e) { log('falha ao enviar para', t, e.message) }
+  }
+}
+
+const MAX_ANEXOS = 5
+/** Manda os anexos do atendimento: fotos como imagem, o resto (PDF do orçamento) como documento. */
+async function enviarAnexos(telefones, anexos) {
+  for (const a of anexos.slice(0, MAX_ANEXOS)) {
+    try {
+      const buf = await banco.baixarAnexo(a.caminho)
+      await enviar(telefones, a.tipo.startsWith('image/')
+        ? { image: buf, caption: a.nome }
+        : { document: buf, mimetype: a.tipo, fileName: a.nome })
+    } catch (e) {
+      log('falha ao baixar anexo', a.nome, e.message)
+      await enviar(telefones, `Não consegui anexar o arquivo ${a.nome}. Ele está no painel.`)
+    }
   }
 }
 
@@ -91,6 +108,7 @@ async function tratar(m) {
       case 'patio': return responder(txt.patio(await banco.noPatio()))
       case 'pendentes': return responder(txt.pendentes(await banco.noPatio()))
       case 'prontos': return responder(txt.prontos(await banco.noPatio()))
+      case 'aprovados': return responder(txt.aprovados(await banco.noPatio()))
       case 'status': {
         const achados = buscar(await banco.noPatio(), cmd.termo)
         if (!achados.length) return responder(`Não encontrei "${cmd.termo}" no pátio. Envie a placa completa, por exemplo: STATUS ABC1D23`)
@@ -157,9 +175,11 @@ async function avisos() {
       if (tipo) {
         const v = await banco.umVeiculo(ev.atendimento_id)
         const aut = await listaAutorizados()
-        const texto = tipo === 'aprovado' ? txt.avisoAprovado(v, ev) : tipo === 'finalizado' ? txt.avisoFinalizado(v, ev) : txt.avisoEntregue(v, ev)
-        const destino = tipo === 'aprovado' ? aut : aut.filter(a => a.papel === 'admin')
-        await enviar(destino.map(a => a.telefone), texto)
+        const anexos = tipo === 'aprovado' ? await banco.anexosDe(v.id) : []
+        const texto = tipo === 'aprovado' ? txt.avisoAprovado(v, ev, Math.min(anexos.length, MAX_ANEXOS)) : tipo === 'finalizado' ? txt.avisoFinalizado(v, ev) : txt.avisoEntregue(v, ev)
+        const destino = (tipo === 'aprovado' ? aut : aut.filter(a => a.papel === 'admin')).map(a => a.telefone)
+        await enviar(destino, texto)
+        if (anexos.length) await enviarAnexos(destino, anexos)
         log(`aviso ${tipo}: ${v.placa}`)
       }
       estado.ultimoEvento = ev.id; salvar()

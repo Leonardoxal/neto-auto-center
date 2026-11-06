@@ -6,6 +6,7 @@ test('interpreta os comandos principais, sem depender de acento ou caixa', () =>
   assert.deepEqual(interpretar('Pátio'), { tipo: 'patio' })
   assert.deepEqual(interpretar('pendentes'), { tipo: 'pendentes' })
   assert.deepEqual(interpretar('PRONTOS'), { tipo: 'prontos' })
+  assert.deepEqual(interpretar('aprovados'), { tipo: 'aprovados' })
   assert.deepEqual(interpretar('ajuda'), { tipo: 'ajuda' })
   assert.deepEqual(interpretar('Status abc-1d23'), { tipo: 'status', termo: 'ABC 1D23' })
   assert.deepEqual(interpretar('Hilux finalizado'), { tipo: 'finalizar', termo: 'HILUX' })

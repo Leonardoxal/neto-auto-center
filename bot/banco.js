@@ -46,6 +46,16 @@ export const eventosDepois = async id =>
   ok(await db.from('eventos').select('id,atendimento_id,tipo,descricao,em,usuario_nome,origem')
     .gt('id', id).in('tipo', ['Aprovação', 'Operacional', 'Saída']).order('id').limit(50))
 
+/** Anexos ativos do atendimento (orçamentos em PDF, fotos), na ordem em que foram enviados. */
+export const anexosDe = async atId =>
+  ok(await db.from('anexos').select('nome,caminho,tipo').eq('atendimento_id', atId).is('removido_em', null).order('criado_em'))
+
+export async function baixarAnexo(caminho) {
+  const { data, error } = await db.storage.from('anexos').download(caminho)
+  if (error) throw new Error(error.message)
+  return Buffer.from(await data.arrayBuffer())
+}
+
 /** Grava pelo robô. Erro 23505 = mensagem já processada antes. */
 export async function registrar(acao, msgId, telefone, atId) {
   const { error } = await db.rpc(acao === 'finalizar' ? 'bot_finalizar' : 'bot_entregar', { p_msg: msgId, p_tel: telefone, p_at: atId })

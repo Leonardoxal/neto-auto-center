@@ -27,7 +27,7 @@ const ENTREGAR = new Set(['ENTREGUE', 'ENTREGOU', 'ENTREGAR', 'ENTREGA'])
 
 /**
  * Lê uma mensagem e devolve o comando.
- * tipos: ajuda, patio, pendentes, prontos, status, finalizar, entregar, sim, nao, escolha, desconhecido
+ * tipos: ajuda, patio, pendentes, prontos, aprovados, status, finalizar, entregar, sim, nao, escolha, desconhecido
  */
 export function interpretar(texto) {
   const t = normalizar(texto)
@@ -40,6 +40,7 @@ export function interpretar(texto) {
   if (['PATIO', 'OFICINA'].includes(t)) return { tipo: 'patio' }
   if (['PENDENTES', 'PENDENTE', 'APROVACAO'].includes(t)) return { tipo: 'pendentes' }
   if (['PRONTOS', 'PRONTO'].includes(t)) return { tipo: 'prontos' }
+  if (['APROVADOS', 'APROVADO'].includes(t)) return { tipo: 'aprovados' }
   if (palavras[0] === 'STATUS' && palavras.length > 1) return { tipo: 'status', termo: palavras.slice(1).join(' ') }
   const ult = palavras[palavras.length - 1]
   if (palavras.length > 1 && FINALIZAR.has(ult)) return { tipo: 'finalizar', termo: palavras.slice(0, -1).join(' ') }
