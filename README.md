@@ -70,7 +70,9 @@ permanente com o WhatsApp Web. Usa o mesmo banco do painel, então o que muda nu
   No lugar da placa pode ir o modelo; com dois veículos parecidos, o robô lista as opções. Toda alteração pede `SIM`.
 - "Finalizado" e "entregue" são registros separados: para entregar, o serviço precisa estar finalizado.
 - Avisa na hora: orçamento aprovado (todos), serviço finalizado e veículo entregue (administradores).
-- Relatórios às 07h30 e 18h00 (horário de Cuiabá) para quem tem `recebe_relatorios`.
+- Relatório do pátio ao ligar o computador (primeiro início do robô no dia; se o computador ficou ligado, às 07h30)
+  e fechamento às 17h00 (horário de Cuiabá), para quem tem `recebe_relatorios`.
+- O aviso de aprovação leva os anexos do atendimento: PDF do orçamento como documento, fotos como imagem (até 5).
 - Cada alteração fica no histórico com `origem = 'whatsapp'` e o nome de quem mandou.
 
 **Instalação (uma vez)**
@@ -96,8 +98,8 @@ permanente com o WhatsApp Web. Usa o mesmo banco do painel, então o que muda nu
 - A pasta `bot/sessao/` equivale a estar logado no WhatsApp do robô. Não copie nem compartilhe.
 - A biblioteca (Baileys) não é oficial do WhatsApp. O WhatsApp pode desconectar ou bloquear o número. Use um número
   só para o robô. Se cair, o robô tenta reconectar; se for desconectado de vez, apague `bot/sessao/` e escaneie de novo.
-- Com o computador desligado não há avisos nem relatórios. Ao religar, os avisos pendentes são enviados; o relatório
-  só sai se o computador ligar até 2 horas depois do horário.
+- Com o computador desligado não há avisos nem relatórios. Ao religar, os avisos pendentes são enviados e sai o
+  relatório do pátio; o fechamento só sai se o computador estiver ligado entre 17h00 e 19h00.
 
 ## Entregas
 1. **Base e pátio** (esta): login e perfis, locadoras, entrada rápida, pátio (lista, tabela, quadro), ficha com orçamento, envio, desconto, aprovação, recusa, nota fiscal, movimentação, saída, edição, arquivamento, histórico, cadastros.

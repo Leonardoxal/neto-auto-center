@@ -116,10 +116,12 @@ export const feito = (acao, v) => [
   'O painel já mostra a mudança.',
 ].join('\n')
 
+const saudacao = agora => { const h = +fmt(agora, { hour: '2-digit', hourCycle: 'h23' }); return h < 12 ? 'Bom dia!' : h < 18 ? 'Boa tarde!' : 'Boa noite!' }
+
 export function relatorioManha(vs, agora = Date.now()) {
   const g = grupos(vs), at = atencao(vs, agora)
   return [
-    CABECALHO, `RELATÓRIO DO PÁTIO — ${fData(agora)}`, 'Bom dia!', '',
+    CABECALHO, `RELATÓRIO DO PÁTIO — ${fData(agora)} ${fHora(agora)}`, saudacao(agora), '',
     `VEÍCULOS NO PÁTIO: ${vs.length}`, '',
     `AGUARDANDO ORÇAMENTO: ${g.orcamento.length}`, ...lista(g.orcamento), '',
     `FALTA APROVAR: ${g.aprovacao.length}`, ...lista(g.aprovacao, v => ` — ${brl(v.valor)}`), '',

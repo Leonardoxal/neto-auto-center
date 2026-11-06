@@ -17,7 +17,8 @@ test('relatório da manhã conta só o que está no pátio, por grupo', () => {
   assert.match(t, /FALTA APROVAR: 1/)
   assert.match(t, /APROVADOS: 0/)
   assert.match(t, /PRONTOS PARA ENTREGA: 1/)
-  assert.match(t, /RELATÓRIO DO PÁTIO — 06\/11\/2026/)
+  assert.match(t, /RELATÓRIO DO PÁTIO — 06\/11\/2026 18h00\nBoa noite!/)
+  assert.match(relatorioManha([], Date.parse('2026-11-06T11:00:00Z')), /Bom dia!/) // 07h00 em Cuiabá
 })
 
 test('fechamento separa o que entrou hoje do que permanece, e finalizado de entregue', () => {

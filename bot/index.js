@@ -14,7 +14,7 @@ import * as txt from './textos.js'
 const PASTA = new URL('.', import.meta.url)
 const ARQ_ESTADO = fileURLToPath(new URL('estado.json', PASTA))
 const MANHA = process.env.RELATORIO_MANHA || '07:30'
-const FIM = process.env.RELATORIO_FIM || '18:00'
+const FIM = process.env.RELATORIO_FIM || '17:00'
 const JANELA_RELATORIO_MIN = 120 // depois disso o relatório do dia não sai mais (ex.: computador ligado à tarde)
 const INTERVALO_AVISOS = 20_000
 const EXPIRA_CONVERSA = 5 * 60_000
@@ -191,13 +191,17 @@ async function avisos() {
 // ---------- relatórios do início e do fim do dia ----------
 const horaLocal = () => new Intl.DateTimeFormat('pt-BR', { timeZone: txt.FUSO, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date())
 const minutos = hm => { const [h, m] = hm.split(':').map(Number); return h * 60 + m }
+// O relatório do pátio sai quando o computador liga (primeiro início do robô no dia). Se o computador ficou
+// ligado desde a véspera, sai no horário MANHA. Uma vez por dia: o robô religado após uma queda não repete.
+let aoLigar = true
 async function relatorios() {
   const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: txt.FUSO }).format(new Date())
   const agora = minutos(horaLocal())
-  const devido = (hm, chave) => estado[chave] !== hoje && agora >= minutos(hm) && agora < minutos(hm) + JANELA_RELATORIO_MIN
+  const naJanela = hm => agora >= minutos(hm) && agora < minutos(hm) + JANELA_RELATORIO_MIN
+  const devido = { manha: estado.manha !== hoje && (aoLigar || naJanela(MANHA)), fim: estado.fim !== hoje && naJanela(FIM) }
   try {
-    for (const [hm, chave] of [[MANHA, 'manha'], [FIM, 'fim']]) {
-      if (!devido(hm, chave)) continue
+    for (const chave of ['manha', 'fim']) {
+      if (!devido[chave]) continue
       const destino = (await listaAutorizados()).filter(a => a.recebe_relatorios).map(a => a.telefone)
       const patio = await banco.noPatio()
       const texto = chave === 'manha' ? txt.relatorioManha(patio) : txt.relatorioFim(patio, await banco.doDia(txt.inicioDoDia()))
@@ -205,6 +209,7 @@ async function relatorios() {
       estado[chave] = hoje; salvar()
       log(`relatório ${chave} enviado para ${destino.length} número(s)`)
     }
+    aoLigar = false
   } catch (e) { log('relatório: banco indisponível, tento de novo:', e.message) }
 }
 
@@ -256,5 +261,5 @@ async function conectar() {
   })
 }
 
-log(`Iniciando. Relatórios às ${MANHA} e ${FIM} (${txt.FUSO}).`)
+log(`Iniciando. Relatório do pátio ao ligar (ou às ${MANHA}) e fechamento às ${FIM} (${txt.FUSO}).`)
 conectar().catch(e => { log('falha ao iniciar:', e.message); process.exit(1) })
