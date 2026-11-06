@@ -3,9 +3,10 @@
 // responde aos comandos dos números autorizados, avisa aprovações/conclusões/entregas e manda os relatórios do dia.
 import './env.js'
 import { readFileSync, writeFileSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import makeWASocket, { Browsers, DisconnectReason, useMultiFileAuthState } from 'baileys'
-import qrcode from 'qrcode-terminal'
+import QRCode from 'qrcode'
 import * as banco from './banco.js'
 import { buscar, digitos, interpretar, mesmoTelefone } from './comandos.js'
 import * as txt from './textos.js'
@@ -17,6 +18,8 @@ const FIM = process.env.RELATORIO_FIM || '18:00'
 const JANELA_RELATORIO_MIN = 120 // depois disso o relatório do dia não sai mais (ex.: computador ligado à tarde)
 const INTERVALO_AVISOS = 20_000
 const EXPIRA_CONVERSA = 5 * 60_000
+const BOT_TELEFONE = digitos(process.env.BOT_TELEFONE) // com ele, conecta por código em vez de QR
+let codigoPedido = false
 
 const log = (...a) => console.log(new Date().toLocaleString('pt-BR', { timeZone: txt.FUSO }), '|', ...a)
 const silencioso = { level: 'silent', child() { return this }, trace() {}, debug() {}, info() {}, warn() {}, error: e => log('baileys:', e?.msg ?? e), fatal: e => log('baileys:', e) }
@@ -78,6 +81,7 @@ async function tratar(m) {
   if (!aut) { log('mensagem ignorada de número não autorizado:', tel ?? jid); return }
 
   const cmd = interpretar(texto)
+  log(`${aut.nome}: ${cmd.tipo}${cmd.termo ? ' ' + cmd.termo : ''}`)
   let conv = conversas.get(aut.telefone)
   if (conv && conv.expira < Date.now()) { conversas.delete(aut.telefone); conv = undefined }
 
@@ -185,13 +189,30 @@ async function relatorios() {
 }
 
 // ---------- conexão ----------
+const ARQ_QR = fileURLToPath(new URL('qr.html', PASTA))
+const paginaQR = (corpo, atualizar) => writeFile(ARQ_QR, `<!doctype html><meta charset="utf-8">${atualizar ? '<meta http-equiv="refresh" content="3">' : ''}`
+  + `<title>Conectar robô</title><body style="font:16px system-ui;text-align:center;padding:24px">${corpo}</body>`).catch(() => {})
 let timers = []
 async function conectar() {
   const { state, saveCreds } = await useMultiFileAuthState(fileURLToPath(new URL('sessao', PASTA)))
   sock = makeWASocket({ auth: state, logger: silencioso, browser: Browsers.windows('NETO AUTO CENTER'), markOnlineOnConnect: false })
   sock.ev.on('creds.update', saveCreds)
-  sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
-    if (qr) { log('Escaneie o QR code abaixo no WhatsApp do robô (Aparelhos conectados › Conectar um aparelho):'); qrcode.generate(qr, { small: true }) }
+  sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+    if (qr && BOT_TELEFONE && !codigoPedido) {
+      // código de 8 letras: mais fácil que escanear o QR na tela
+      codigoPedido = true
+      try {
+        const codigo = await sock.requestPairingCode(BOT_TELEFONE)
+        log(`CÓDIGO PARA CONECTAR: ${codigo.slice(0, 4)}-${codigo.slice(4)}`)
+        log('No WhatsApp do robô: Aparelhos conectados › Conectar um aparelho › Conectar com número de telefone › digite o código.')
+      } catch (e) { log('não consegui gerar o código, use o QR code:', e.message) }
+    }
+    if (qr && !BOT_TELEFONE) {
+      await paginaQR(`<img alt="QR code do WhatsApp" src="${await QRCode.toDataURL(qr, { width: 420, margin: 2 })}">`
+        + '<p>WhatsApp do robô › Aparelhos conectados › Conectar um aparelho › aponte a câmera.<br>A imagem se atualiza sozinha.</p>', true)
+      log(`QR code novo. Abra no navegador: ${ARQ_QR}`)
+    }
+    if (connection === 'open') await paginaQR('<h1>Conectado ao WhatsApp.</h1><p>Pode fechar esta página.</p>', false)
     if (connection === 'open') {
       log('Conectado ao WhatsApp.')
       timers.forEach(clearInterval)

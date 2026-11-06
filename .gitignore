@@ -9,3 +9,5 @@ dev-dist
 # robô de WhatsApp: sessão (equivale a estar logado no WhatsApp) e estado local
 bot/sessao/
 bot/estado.json
+bot/qr.html
+bot/bot.log

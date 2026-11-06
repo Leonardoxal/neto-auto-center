@@ -84,9 +84,12 @@ permanente com o WhatsApp Web. Usa o mesmo banco do painel, então o que muda nu
    copy .env.example .env    # preencha SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY
    npm start
    ```
-4. Escaneie o QR code que aparece, pelo WhatsApp do número do robô: Configurações › Aparelhos conectados › Conectar.
-5. Para iniciar sozinho com o Windows: Agendador de Tarefas › Criar tarefa › "Ao fazer logon" › programa `npm`,
-   argumentos `start`, iniciar em `...\neto-auto-center\bot`.
+4. Abra `bot/qr.html` no navegador (a imagem se atualiza sozinha) e escaneie pelo WhatsApp do número do robô:
+   Aparelhos conectados › Conectar um aparelho. Alternativa: `BOT_TELEFONE` no `.env` gera um código de 8 letras
+   (Conectar com número de telefone).
+5. Para ligar sozinho com o Windows: tarefa agendada "NETO - robo WhatsApp", ao fazer logon, roda `bot\iniciar.cmd`
+   escondido. O script religa o robô se ele parar e grava o registro em `bot\bot.log`. Pare o `npm start` manual
+   antes de iniciar a tarefa: duas cópias ao mesmo tempo derrubam a conexão.
 
 **Cuidados**
 - A chave `service_role` dá acesso total ao banco. Fica só no `bot/.env` desse computador (o `.gitignore` já bloqueia).
