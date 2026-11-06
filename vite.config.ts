@@ -27,5 +27,5 @@ export default defineConfig({
       workbox: { navigateFallback: '/index.html', globPatterns: ['**/*.{js,css,html,svg,png}'] }
     })
   ],
-  test: { environment: 'node' }
+  test: { environment: 'node', include: ['src/**/*.test.ts'] } // bot/ tem seus próprios testes (node --test)
 } as any)

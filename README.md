@@ -59,6 +59,43 @@ npm test        # testes das regras de cálculo
 npm run build   # versão de produção em dist/
 ```
 
+## Robô de WhatsApp (pasta `bot/`)
+
+Roda num computador da oficina que fica ligado no expediente. Não roda na Vercel: precisa de uma conexão
+permanente com o WhatsApp Web. Usa o mesmo banco do painel, então o que muda num lado aparece no outro.
+
+**O que faz**
+- Responde só aos números da tabela `whatsapp_autorizados`. Outros números são ignorados.
+- Comandos: `PATIO`, `PENDENTES`, `PRONTOS`, `STATUS ABC1D23`, `ABC1D23 FINALIZADO`, `ABC1D23 ENTREGUE`, `AJUDA`.
+  No lugar da placa pode ir o modelo; com dois veículos parecidos, o robô lista as opções. Toda alteração pede `SIM`.
+- "Finalizado" e "entregue" são registros separados: para entregar, o serviço precisa estar finalizado.
+- Avisa na hora: orçamento aprovado (todos), serviço finalizado e veículo entregue (administradores).
+- Relatórios às 07h30 e 18h00 (horário de Cuiabá) para quem tem `recebe_relatorios`.
+- Cada alteração fica no histórico com `origem = 'whatsapp'` e o nome de quem mandou.
+
+**Instalação (uma vez)**
+1. Rode a migração `supabase/migrations/0008_whatsapp.sql` no Supabase.
+2. Cadastre os números no Supabase › Table Editor › `whatsapp_autorizados`: telefone só com dígitos, com 55 e DDD
+   (ex.: `5565999998888`), nome, papel `admin` (Leonardo) ou `operacao` (oficina).
+3. No computador da oficina, com Node 20 ou mais novo:
+   ```bash
+   cd bot
+   npm install
+   copy .env.example .env    # preencha SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY
+   npm start
+   ```
+4. Escaneie o QR code que aparece, pelo WhatsApp do número do robô: Configurações › Aparelhos conectados › Conectar.
+5. Para iniciar sozinho com o Windows: Agendador de Tarefas › Criar tarefa › "Ao fazer logon" › programa `npm`,
+   argumentos `start`, iniciar em `...\neto-auto-center\bot`.
+
+**Cuidados**
+- A chave `service_role` dá acesso total ao banco. Fica só no `bot/.env` desse computador (o `.gitignore` já bloqueia).
+- A pasta `bot/sessao/` equivale a estar logado no WhatsApp do robô. Não copie nem compartilhe.
+- A biblioteca (Baileys) não é oficial do WhatsApp. O WhatsApp pode desconectar ou bloquear o número. Use um número
+  só para o robô. Se cair, o robô tenta reconectar; se for desconectado de vez, apague `bot/sessao/` e escaneie de novo.
+- Com o computador desligado não há avisos nem relatórios. Ao religar, os avisos pendentes são enviados; o relatório
+  só sai se o computador ligar até 2 horas depois do horário.
+
 ## Entregas
 1. **Base e pátio** (esta): login e perfis, locadoras, entrada rápida, pátio (lista, tabela, quadro), ficha com orçamento, envio, desconto, aprovação, recusa, nota fiscal, movimentação, saída, edição, arquivamento, histórico, cadastros.
 2. Telas de aprovações, serviços em execução e faturamento.
