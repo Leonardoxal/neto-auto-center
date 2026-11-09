@@ -5,6 +5,7 @@ import App from './App'
 import { StoreProvider } from './lib/store'
 import { SheetProvider } from './ui/ui'
 import './styles.css'
+import './garage.css'
 
 registerSW({ immediate: true })
 

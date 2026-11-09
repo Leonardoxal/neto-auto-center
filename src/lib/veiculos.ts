@@ -91,6 +91,9 @@ export function identificarModelo(texto: string): ModeloConhecido | null {
   return APELIDOS.find(x => t.includes(x.a))?.m ?? null
 }
 
-export const urlImagem = (arquivo: string, largura = 480) =>
+/** Foto da capa do login e do início quando não há veículo com foto. Troque por uma foto real da NETO quando houver. */
+export const FOTO_CAPA = '2016_Toyota_HiLux_Invincible_D-4D_4WD_2.4_Front.jpg'
+
+export const urlImagem =(arquivo: string, largura = 480) =>
   `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(arquivo)}?width=${largura}`
 export const paginaImagem = (arquivo: string) => `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(arquivo)}`

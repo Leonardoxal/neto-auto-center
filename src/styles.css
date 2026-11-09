@@ -1,15 +1,16 @@
 
-/* Identidade: oficina à noite. Asfalto e aço; vermelho neon só onde há ação, alerta ou item ativo.
-   Barlow Condensed nos títulos e números (letreiro de oficina), Barlow no texto. Sempre escuro. */
+/* Identidade: NETO AUTO CENTER — editorial automotivo (ver docs/AUDITORIA_E_DESIGN.md).
+   Preto, grafite, cinza metálico e branco; o vermelho NETO é o único destaque. Outras cores só para estados (--st-*). */
 :root{
-  --bg:#0E1013; --card:#171A1E; --card2:#121418; --fill:rgba(255,255,255,.06); --press:rgba(255,255,255,.10);
-  --label:#ECEEF1; --sec:#8E96A0; --ter:#59616B; --sep:#2A2F36; --edge:#2A2F36;
-  --red:#FF2D2D; --redSoft:rgba(255,45,45,.14); --onRed:#FFFFFF; --neon:0 0 6px rgba(255,45,45,.85),0 0 18px rgba(255,45,45,.45);
-  --orange:#F2A93B; --orangeSoft:rgba(242,169,59,.14);
-  --green:#45D483; --greenSoft:rgba(69,212,131,.13);
-  --info:#C9CED6; --infoSoft:rgba(255,255,255,.07);
-  --bar:rgba(14,16,19,.9); --segOn:#2C3138; --toast:#ECEEF1; --onToast:#0E1013;
-  --radius:3px;
+  --bg:#0A0A0B; --card:#141516; --card2:#0F1011; --card3:#1C1D1F; --fill:rgba(255,255,255,.05); --press:rgba(255,255,255,.09);
+  --label:#F4F4F2; --sec:#8C9096; --ter:#5A5E64; --sep:#232427; --edge:#26282B; --edgeHi:#3A3D42;
+  --red:#D71920; --redHi:#E8252E; --redSoft:rgba(215,25,32,.14); --onRed:#FFFFFF;
+  --orange:#E07B39; --orangeSoft:rgba(224,123,57,.14);
+  --green:#4CAF6E; --greenSoft:rgba(76,175,110,.13);
+  --info:#C8CACD; --infoSoft:rgba(255,255,255,.06);
+  --st-b:#6E9CC8; --st-y:#D2AE4E; --st-o:#E07B39; --st-g:#4CAF6E; --st-x:#D71920; --st-v:#B08D57; --st-w:#F4F4F2; --st-r:#7A7F87;
+  --bar:rgba(10,10,11,.9); --segOn:#2A2C2F; --toast:#F4F4F2; --onToast:#0A0A0B;
+  --radius:2px;
   --font:"Barlow",system-ui,"Segoe UI",Roboto,Arial,sans-serif;
   --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Roboto Mono",monospace;
@@ -346,76 +347,3 @@ textarea.csv{width:100%;min-height:220px;font-family:var(--mono);font-size:12px;
   .stack>.seg button[aria-pressed="true"]{background:var(--label);color:var(--bg);box-shadow:none}
 }
 
-/* ---------- oficina à noite: cantos retos, bordas de aço, sem sombras ---------- */
-.group,.tblwrap,.tile,.stops,.kcol,.kcard,.act,.fg,.hint,.vcard,.panel,.banner,textarea.csv,.seg,.search,.toolbar select,.toolbar input[type=date]{border-radius:var(--radius)}
-.group,.tblwrap,.tile,.kcard,.act,.fg,.vcard,.fchip,.toolbar select,.toolbar input[type=date]{border:1px solid var(--edge)}
-.panel{box-shadow:none;border:1px solid var(--edge);border-bottom:0}
-@media (min-width:900px){.panel{border-bottom:1px solid var(--edge)}}
-.scrim{background:rgba(0,0,0,.62)}
-.seg button,.btn,.btn.sm,.fchip,.pill,.tag,.l-tipo,.l-qtd,.l-val,.carimg img,.carimg.vazio{border-radius:2px}
-.ibtn{border-radius:var(--radius)}
-.avatar,.step .c,.chk,.act .ib{border-radius:2px}
-.dot{border-radius:1px}
-
-/* títulos: letreiro condensado com tubo de neon embaixo (o único elemento chamativo) */
-.large h1{font-family:var(--display);font-weight:700;font-size:40px;line-height:1;letter-spacing:.01em;text-transform:uppercase}
-.large h1::after{content:"";display:block;width:56px;height:3px;margin-top:10px;background:var(--red);box-shadow:var(--neon)}
-.large .sub{margin-top:10px}
-.login h1,.sh-h h2,.nb-title,.kcol h4{font-family:var(--display);font-weight:600;letter-spacing:.02em}
-.login h1{font-size:30px}
-.sh{font-family:var(--display);font-size:17px;font-weight:600;letter-spacing:.01em;text-transform:none;color:var(--label);margin:0 0 8px}
-.fgt{text-transform:none;letter-spacing:0;font-size:13px}
-.tile .tv,.stops b,.rr .big,.step .c{font-family:var(--display)}
-.tile .tv{font-size:34px;font-weight:700;letter-spacing:0}
-.tile .tl{color:var(--sec)}
-.tile:hover,.vcard:hover,.kcard:hover,button.row:hover{border-color:#3C434D}
-.tile.warn{border-left:3px solid var(--orange)} .tile.crit{border-left:3px solid var(--red)}
-.stops{gap:0;background:none;border:1px solid var(--edge)}
-.stops button+button{border-left:1px solid var(--edge)}
-.stops button.hot b{text-shadow:var(--neon)}
-
-/* marca: placa de oficina com o N aceso */
-.brand{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.08em}
-.brand i{border-radius:2px;background:transparent;color:var(--red);border:1.5px solid var(--red);box-shadow:var(--neon),inset 0 0 6px rgba(255,45,45,.5);text-shadow:var(--neon);font-family:var(--display);font-size:14px}
-.sbrand small{padding-left:29px}
-@media (min-width:900px){.nb-in>.brand{visibility:hidden}}
-.login .brand{font-size:24px;gap:12px}
-.login .brand i{width:34px;height:34px;font-size:22px}
-.login h1{color:var(--sec);font-weight:500;font-size:20px;letter-spacing:.06em}
-
-/* menu lateral: barra neon no item ativo em vez de bloco vermelho */
-#side{background:var(--card2);border-right:1px solid var(--edge)}
-.snav button{border-radius:0;font-family:var(--display);font-size:17px;font-weight:500;letter-spacing:.02em;padding:9px 12px;border-left:3px solid transparent;color:var(--sec)}
-.snav button .ic{color:var(--ter)}
-.snav button:hover{color:var(--label);background:var(--fill)}
-.snav button[aria-current="page"]{background:var(--fill);color:var(--label);border-left-color:var(--red);box-shadow:inset 6px 0 10px -6px rgba(255,45,45,.6)}
-.snav button[aria-current="page"] .ic{color:var(--red)}
-.snav button[aria-current="page"] .cnt{color:var(--sec);opacity:1}
-#tabs{border-top:1px solid var(--edge)}
-#tabs button{font-family:var(--display);font-size:12.5px;letter-spacing:.03em}
-#tabs button[aria-current="page"] .ic{filter:drop-shadow(0 0 5px rgba(255,45,45,.7))}
-.navbar::after{border-bottom:1px solid var(--edge)}
-
-/* botões e filtros */
-.btn{font-family:var(--display);font-size:17px;font-weight:600;letter-spacing:.03em}
-.btn.sm{font-size:15px}
-.btn.ghost{background:transparent;border:1px solid var(--edge);color:var(--label)}
-.btn.ghost:hover{border-color:var(--red)}
-.fchip{background:var(--card)}
-.fchip[aria-pressed="true"]{background:var(--redSoft);color:var(--label);border-color:var(--red)}
-.fchip[aria-pressed="true"] b{color:var(--red);opacity:1}
-.seg{background:var(--card);border:1px solid var(--edge)}
-.seg button[aria-pressed="true"]{box-shadow:none;background:var(--segOn)}
-.search{background:var(--card);border:1px solid var(--edge)}
-.search:focus-within{border-color:var(--red)}
-:focus-visible{border-radius:2px}
-
-/* pátio: etapas em aço, a atual acesa */
-.steps .trk,.steps .fill{border-radius:0;height:3px;top:14px}
-.steps .fill{background:var(--sec)}
-.step .c{background:var(--bg);border-color:var(--ter)}
-.step.done .c{background:var(--sec);border-color:var(--sec);color:var(--bg)}
-.step.cur .c{border-color:var(--red);box-shadow:var(--neon)}
-.vcard{border-left:3px solid var(--edge)}
-.tbtn.addmod{padding:0;min-height:0;font-size:15px;font-weight:600}
-.plate{border-radius:2px}

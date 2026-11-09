@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alerta, faturado, LISTAS, resumoItens, normPlaca, placaValida, pode, tempoAprovacao, tempos, valorAtual, valorInicial, type Atendimento } from './domain'
+import { alerta, estadoPrincipal, faturado, LISTAS, tom, resumoItens, normPlaca, placaValida, pode, tempoAprovacao, tempos, valorAtual, valorInicial, type Atendimento } from './domain'
 import { deInputLocal, dur, numero, paraInputLocal } from './format'
 
 const H = 36e5, D = 864e5, AGORA = Date.parse('2026-10-20T15:00:00Z')
@@ -81,6 +81,19 @@ describe('pátio e faturamento', () => {
     expect(LISTAS.fatserv.f(a)).toBe(true)
     expect(LISTAS.aprovados.f(a)).toBe(true)
     expect(LISTAS.aprovados.f(base({ sit_comercial: 'Aprovado', sit_operacional: 'Serviço concluído' }))).toBe(false)
+  })
+  it('estado principal segue a etapa mais adiantada, com cor fixa por estado', () => {
+    const e = (o: Partial<Atendimento>) => { const r = estadoPrincipal(base(o)); return `${r.t}/${r.tom}` }
+    expect(e({ sit_comercial: 'Aguardando orçamento' })).toBe('Diagnóstico/b')
+    expect(e({ sit_comercial: 'Aguardando orçamento', orcamento_revisoes: [{ id: 'r', seq: 1, valor: 100, em: iso(H), obs: '' }] })).toBe('Orçamento/y')
+    expect(e({ sit_comercial: 'Aguardando aprovação' })).toBe('Aguardando aprovação/o')
+    expect(e({ sit_comercial: 'Aprovado', sit_operacional: 'Aguardando início' })).toBe('Aprovado/g')
+    expect(e({ sit_comercial: 'Aprovado', sit_operacional: 'Em execução' })).toBe('Em execução/x')
+    expect(e({ sit_comercial: 'Aprovado', sit_operacional: 'Aguardando peças' })).toBe('Aguardando peças/v')
+    expect(e({ sit_comercial: 'Aprovado', sit_operacional: 'Serviço concluído' })).toBe('Finalizado/w')
+    expect(e({ sit_fisica: 'entregue', saida: iso(H) })).toBe('Entregue/g')
+    expect(tom('Em execução')).toBe('x')
+    expect(tom('Vencido')).toBe('r')
   })
   it('nota cancelada não soma no faturado', () => {
     const a = base({ notas_fiscais: [{ id: 'n', tipo: 'NFS-e', numero: '1', serie: '1', valor: 1000, emissao: iso(H), cancelada: true }] })

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { faturado, alerta, LISTAS, OPERACIONAL, naOficina, comCondutor, noPatio, semAtualizacao, tempoNoPatio, ultimaAtualizacao, type Atendimento } from '../lib/domain'
+import { faturado, alerta, estadoPrincipal, LISTAS, OPERACIONAL, naOficina, comCondutor, noPatio, semAtualizacao, tempoNoPatio, ultimaAtualizacao, type Atendimento } from '../lib/domain'
 import { dur, fDataHora } from '../lib/format'
 import { useStore } from '../lib/store'
-import { Ic, Nav, Pill, Plate, Seg, Section, Tile } from '../ui/ui'
+import { FOTO_CAPA, identificarModelo, paginaImagem, urlImagem } from '../lib/veiculos'
+import { CarroImg, Ic, Nav, Pill, Plate, Seg, Section } from '../ui/ui'
 import { AtRow, Lista, VCard, useNav } from './comum'
 import { useEntrada } from './Entrada'
 
@@ -59,7 +60,7 @@ export function Patio({ lista: inicial, onBack }: { lista?: string; onBack?: () 
 }
 
 export function Inicio() {
-  const { ativos, me, versao } = useStore(); const nav = useNav(); const entrada = useEntrada()
+  const { ativos, me, versao, locNome } = useStore(); const nav = useNav(); const entrada = useEntrada()
   const [entreguesHoje, setEntreguesHoje] = useState<number | null>(null)
   useEffect(() => { // entregues não estão em "ativos" (só o pátio): conta direto no banco, desde 00h de Cuiabá
     const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Cuiaba' }).format(new Date())
@@ -70,32 +71,63 @@ export function Inicio() {
   const n = (k: string) => ativos.filter(LISTAS[k].f).length
   const parados = (d: number) => P.filter(a => semAtualizacao(a) > d * 864e5).length
   const h = new Date().getHours(), saud = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'
-  const recentes = [...P].sort((a, b) => +new Date(b.entrada) - +new Date(a.entrada)).slice(0, 5)
   const lista = (k: string) => () => nav.push({ r: 'patio', id: k })
+  // ordem de interesse: o que está em serviço vem antes do que espera
+  const ordem = (a: Atendimento) => 'xgvowybr'.indexOf(estadoPrincipal(a).tom || 'r')
+  const garagem = [...P].sort((a, b) => ordem(a) - ordem(b) || +new Date(b.atualizado_em) - +new Date(a.atualizado_em))
+  const destaque = garagem.find(a => identificarModelo(a.modelo))
+  const foto = identificarModelo(destaque?.modelo ?? '') ?? { nome: '', arquivo: FOTO_CAPA }
+  const est = destaque && estadoPrincipal(destaque)
+  const placar: [string, string, number | null, string, (() => void) | undefined][] = [
+    ['orc', 'Aguardando orçamento', n('orc'), 'y', lista('orc')],
+    ['aprov', 'Aguardando aprovação', n('aprov'), 'o', lista('aprov')],
+    ['aprovados', 'Aprovados', n('aprovados'), 'g', lista('aprovados')],
+    ['exec', 'Em execução', n('exec'), 'x', lista('exec')],
+    ['pecas', 'Aguardando peças', n('pecas'), 'v', lista('pecas')],
+    ['prontos', 'Prontos para entrega', n('prontos'), 'w', lista('prontos')],
+    ['fora', 'Com o condutor', n('fora'), '', lista('fora')],
+    ['entregues', 'Entregues hoje', entreguesHoje, 'g', undefined],
+  ]
   return <>
-    <Nav title="Início" sub={`${saud}, ${me?.nome ?? ''} · ${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Cuiaba' })}`}
-      right={<button className="ibtn solid" onClick={entrada} aria-label="Nova entrada" title="Nova entrada"><Ic n="plus" /></button>} />
-    {!P.length && <section className="sec"><div className="group"><div className="empty" style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+    <Nav title="" right={<button className="ibtn solid" onClick={entrada} aria-label="Nova entrada" title="Nova entrada"><Ic n="plus" /></button>} />
+    <section className="capa">
+      <img src={urlImagem(foto.arquivo, 1600)} alt={destaque ? `Foto ilustrativa de um ${foto.nome}` : ''} />
+      <div className="capa-txt">
+        <span className="capa-data">{saud}, {me?.nome ?? ''} · {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Cuiaba' })}</span>
+        <h1><b>{P.filter(naOficina).length}</b> {P.filter(naOficina).length === 1 ? 'veículo' : 'veículos'} na oficina</h1>
+        {destaque && est && <button className={`capa-dest st-${est.tom}`} onClick={() => nav.push({ r: 'at', id: destaque.id })}>
+          <span className="est">{est.t}</span><b>{destaque.modelo} · {destaque.placa}</b><span>{locNome(destaque.locadora_id)}</span></button>}
+      </div>
+      <small className="capa-cred">Foto ilustrativa · <a href={paginaImagem(foto.arquivo)} target="_blank" rel="noopener noreferrer">Wikimedia Commons</a></small>
+    </section>
+    {P.length > 0 && <div className="placar">{placar.map(([k, t, v, st, abrir]) =>
+      <button key={k} className={`${st ? 'st-' + st : ''} ${v ? '' : 'zero'}`} onClick={abrir} disabled={!abrir} style={abrir ? undefined : { cursor: 'default' }}>
+        <b>{v ?? '—'}</b><span>{t}</span></button>)}</div>}
+    {!P.length && <section className="sec"><div className="empty" style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
       <b style={{ color: 'var(--label)', fontSize: 16 }}>Nenhum veículo no pátio</b>
       <span>Registre a primeira entrada. A locadora pode ser cadastrada no mesmo formulário.</span>
-      <button className="btn" onClick={entrada}><Ic n="plus" sm /> Nova entrada</button></div></div></section>}
-    <Section title="Pátio agora" right={<button className="tbtn" onClick={() => nav.go('patio')}>Abrir pátio</button>}>
-      <div className="tiles t3">
-        <Tile label="Na oficina" value={P.filter(naOficina).length} foot={`${P.length} atendimentos ativos`} onClick={lista('todos')} />
-        <Tile label="Com o condutor" value={P.filter(comCondutor).length} foot="atendimento ativo, veículo fora" cls={P.filter(comCondutor).length ? 'warn' : ''} onClick={lista('fora')} />
-        <Tile label="Aguardando orçamento" value={n('orc')} onClick={lista('orc')} />
-        <Tile label="Aguardando aprovação" value={n('aprov')} cls={n('aprov') ? 'warn' : ''} onClick={lista('aprov')} />
-        <Tile label="Aprovados" value={n('aprovados')} foot="ainda em serviço" onClick={lista('aprovados')} />
-        <Tile label="Em execução" value={n('exec')} onClick={lista('exec')} />
-        <Tile label="Aguardando peças" value={n('pecas')} cls={n('pecas') ? 'warn' : ''} onClick={lista('pecas')} />
-        <Tile label="Prontos para entrega" value={n('prontos')} onClick={lista('prontos')} />
-        <Tile label="Entregues hoje" value={entreguesHoje ?? '—'} foot="saíram do pátio hoje" />
-      </div>
-      <h3 className="sh" style={{ marginTop: 16 }}>Parados sem atualização</h3>
+      <button className="btn" onClick={entrada}><Ic n="plus" sm /> Nova entrada</button></div></section>}
+    {P.length > 0 && <Section title="Veículos" right={<button className="tbtn" onClick={() => nav.go('patio')}>Ver o pátio ({P.length})</button>}>
+      <div className="garagem">{garagem.slice(0, 8).map(a => <LinhaVeiculo key={a.id} a={a} />)}</div>
+    </Section>}
+    {P.length > 0 && <Section title="Parados sem atualização">
       <div className="stops">{[3, 7, 15, 30].map(d => <button key={d} className={parados(d) && d >= 7 ? 'hot' : ''} onClick={() => nav.push({ r: 'parados', id: String(d) })}><b>{parados(d)}</b><span>+ de {d} dias</span></button>)}</div>
-    </Section>
-    {recentes.length > 0 && <Section title="Últimas entradas"><div className="group">{recentes.map(a => <AtRow key={a.id} a={a} />)}</div></Section>}
+    </Section>}
   </>
+}
+
+/** Linha da garagem no início: foto do modelo, nome, placa, cliente, estado e tempo no pátio. */
+function LinhaVeiculo({ a }: { a: Atendimento }) {
+  const { locNome } = useStore(); const nav = useNav(); const e = estadoPrincipal(a)
+  return <button className={`lv st-${e.tom}`} onClick={() => nav.push({ r: 'at', id: a.id })}>
+    <CarroImg modelo={a.modelo} />
+    <span className="lv-txt">
+      <span className="est">{e.t}</span>
+      <b className="lv-mod">{a.modelo || 'Modelo não informado'}</b>
+      <span className="lv-sub"><Plate p={a.placa} />{locNome(a.locadora_id)}{a.servico ? ` · ${a.servico}` : ''}</span>
+    </span>
+    <span className="lv-fim"><span className="lv-tempo">{dur(tempoNoPatio(a))}<small>no pátio</small></span></span>
+  </button>
 }
 
 export function Parados({ dias }: { dias: number }) {

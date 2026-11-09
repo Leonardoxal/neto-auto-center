@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { configurado, supabase, msgErro } from './lib/supabase'
 import { useStore } from './lib/store'
 import { LISTAS } from './lib/domain'
+import { FOTO_CAPA, paginaImagem, urlImagem } from './lib/veiculos'
 import { Brand, Fg, Field, Ic } from './ui/ui'
 import { NavCtx, type Rota } from './screens/comum'
 import { Inicio, Parados, Patio } from './screens/Patio'
@@ -28,14 +29,22 @@ function Login() {
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: location.origin })
     if (error) setErro(msgErro(error)); else setInfo('Se o e-mail estiver cadastrado, você vai receber um link para criar uma nova senha.')
   }
-  return <div className="login"><form className="card" onSubmit={entrar}>
-    <Brand /><h1>Gestão Operacional</h1>
-    <Fg><Field label="E-mail"><input id="f_email" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} /></Field>
-      <Field label="Senha"><input id="f_senha" type="password" autoComplete="current-password" value={senha} onChange={e => setSenha(e.target.value)} /></Field></Fg>
-    {erro && <p className="err">{erro}</p>}{info && <p className="muted sm" style={{ margin: '0 4px' }}>{info}</p>}
-    <button className="btn block" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</button>
-    <button type="button" className="tbtn" style={{ justifyContent: 'center' }} onClick={esqueci}>Esqueci a senha</button>
-  </form></div>
+  return <div className="login foto">
+    <div className="login-foto" style={{ backgroundImage: `url("${urlImagem(FOTO_CAPA, 1600)}")` }} aria-hidden="true" />
+    <div className="login-in">
+      <div className="login-marca"><Brand />
+        <p className="serv">Mecânica · Elétrica · Diesel<br />Funilaria · Pintura · Frotas</p>
+        <p className="local">Oficina automotiva · Tangará da Serra, MT</p></div>
+      <form className="card" onSubmit={entrar} aria-label="Entrar no sistema">
+        <Fg><Field label="E-mail"><input id="f_email" type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} /></Field>
+          <Field label="Senha"><input id="f_senha" type="password" autoComplete="current-password" value={senha} onChange={e => setSenha(e.target.value)} /></Field></Fg>
+        {erro && <p className="err">{erro}</p>}{info && <p className="muted sm" style={{ margin: '0 4px' }}>{info}</p>}
+        <button className="btn block" disabled={busy}>{busy ? 'Entrando…' : 'Entrar no sistema'}</button>
+        <button type="button" className="tbtn" style={{ justifyContent: 'flex-start' }} onClick={esqueci}>Esqueci a senha</button>
+      </form>
+    </div>
+    <small className="login-cred">Foto ilustrativa · <a href={paginaImagem(FOTO_CAPA)} target="_blank" rel="noopener noreferrer">Wikimedia Commons</a></small>
+  </div>
 }
 
 function NovaSenha({ fim }: { fim: () => void }) {

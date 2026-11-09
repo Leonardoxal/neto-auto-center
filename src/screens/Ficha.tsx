@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  COMERCIAL, FINANCEIRA, FISCAL, FISICA, OPERACIONAL, ESPERAS, descontoConcedido, descontoSolicitado, faturado, noPatio,
+  COMERCIAL, FINANCEIRA, FISCAL, FISICA, OPERACIONAL, ESPERAS, descontoConcedido, descontoSolicitado, estadoPrincipal, faturado, noPatio,
   tempoNoPatio, tempos, ultimaAtualizacao, valorAtual, valorInicial, type Acao, type Atendimento,
 } from '../lib/domain'
 import { brl, deInputLocal, dur, fData, fDataHora, fHora, numero, paraInputLocal, pct } from '../lib/format'
@@ -42,7 +42,7 @@ export function Ficha({ id }: { id: string }) {
   const guard = (k: Acao) => { if (store.pode(k)) return true; sheet.toast(`O perfil ${store.me?.perfil} não pode fazer isso.`); return false }
   const run = (fn: string, args: Record<string, unknown>) => store.rpc(fn, { p_at: a.id, ...args })
   const areas = store.areas.filter(x => x.ativa).map(x => x.nome)
-  const vi = valorInicial(a), va = valorAtual(a)
+  const vi = valorInicial(a), va = valorAtual(a), est = estadoPrincipal(a)
   const acItens = acoesItens(a, store, sheet)
 
   // ---------- ações ----------
@@ -169,9 +169,20 @@ export function Ficha({ id }: { id: string }) {
 
   return <>
     <Nav title="" onBack={nav.back} />
-    <div className="fhead"><CarroImg modelo={a.modelo} grande credito /><Plate p={a.placa} lg />
-      <div className="sub"><NomeModelo a={a} />{a.modelo && store.pode('editar') && <> <button className="tbtn" style={{ display: 'inline', padding: 0, minHeight: 0, fontSize: 'inherit' }} onClick={() => modelo(a)}>(alterar)</button></>} · <button className="tbtn" style={{ display: 'inline', padding: 0, minHeight: 0, fontSize: 'inherit' }} onClick={() => nav.push({ r: 'loc', id: a.locadora_id })}>{store.locNome(a.locadora_id)}</button> · {a.numero}</div>
-      {outros.length > 0 && <div className="muted sm">{outros.length} outro(s) atendimento(s) desta placa no histórico.</div>}
+    <div className={`hero st-${est.tom}`}>
+      <div className="hero-img"><CarroImg modelo={a.modelo} grande credito /></div>
+      <div className="hero-info">
+        <span className="vest">{est.t}</span>
+        <h1 className="hero-nome"><NomeModelo a={a} />{a.modelo && store.pode('editar') && <> <button className="tbtn" onClick={() => modelo(a)}>(alterar)</button></>}</h1>
+        <Plate p={a.placa} lg />
+        <div className="sub"><button className="tbtn" style={{ display: 'inline', padding: 0, minHeight: 0, fontSize: 'inherit' }} onClick={() => nav.push({ r: 'loc', id: a.locadora_id })}>{store.locNome(a.locadora_id)}</button> · {a.numero}{a.os ? ` · OS ${a.os}` : ''}</div>
+        <div className="hero-kpis">
+          <div><b>{dur(tempoNoPatio(a))}</b><span>{a.saida ? 'Permanência' : 'No pátio'}</span></div>
+          <div><b>{va == null ? 'Pendente' : brl(va)}</b><span>Orçamento</span></div>
+          <div><b>{noPatio(a) && a.na_oficina === false ? 'Com o condutor' : a.local}</b><span>Local</span></div>
+        </div>
+        {outros.length > 0 && <div className="muted sm">{outros.length} outro(s) atendimento(s) desta placa no histórico.</div>}
+      </div>
     </div>
     <section className="sec"><div className="group" style={{ padding: '12px 10px 8px' }}><Etapas a={a} /></div>
       {noPatio(a) && <div className="chips" style={{ marginTop: 8 }}>

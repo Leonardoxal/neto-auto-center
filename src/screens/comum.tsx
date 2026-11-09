@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
-import { alerta, comCondutor, etapas, FISICA, faturado as faturadoAt, resumoItens, noPatio, semAtualizacao, tempoNoPatio, type Atendimento } from '../lib/domain'
+import { alerta, comCondutor, estadoPrincipal, etapas, FISICA, faturado as faturadoAt, resumoItens, noPatio, semAtualizacao, tempoNoPatio, type Atendimento } from '../lib/domain'
 import { brl, deInputLocal, dur, fData, fDataHora, paraInputLocal } from '../lib/format'
 import { useStore } from '../lib/store'
 import { CarroImg, Field, Fg, Ic, Note, Pill, Plate, useSheet } from '../ui/ui'
@@ -109,13 +109,14 @@ export function Etapas({ a }: { a: Atendimento }) {
 
 export function VCard({ a }: { a: Atendimento }) {
   const { locNome, pode: podeFn } = useStore(); const nav = useNav(); const presenca = usePresenca()
-  const fat = faturadoAt(a), fora = comCondutor(a), al = alerta(a)
+  const fat = faturadoAt(a), fora = comCondutor(a), al = alerta(a), est = estadoPrincipal(a)
   const abrir = () => nav.push({ r: 'at', id: a.id })
-  return <div className="vcard" role="button" tabIndex={0} onClick={abrir} onKeyDown={e => { if (e.key === 'Enter') abrir() }}>
+  return <div className={`vcard st-${est.tom}`} role="button" tabIndex={0} onClick={abrir} onKeyDown={e => { if (e.key === 'Enter') abrir() }}>
     <div className="vtop">
       <CarroImg modelo={a.modelo} />
       <div className="vbody">
       <div className="vtit">
+        <span className="vest">{est.t}</span>
         <div className="l1"><NomeModelo a={a} forte /><Plate p={a.placa} />
           {a.os ? <span className="ndoc os">{a.os}</span> : <span className="ndoc at">{a.numero}</span>}</div>
         <div className="chips">

@@ -160,9 +160,33 @@ export function tempos(a: Atendimento, agora = Date.now()): [string, number | st
 export const normPlaca = (v: string) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
 export const placaValida = (p: string) => /^[A-Z]{3}\d[A-Z0-9]\d{2}$/.test(p)
 
-export function tom(s: string): '' | 'g' | 'o' | 'r' {
-  if (['Aprovado', 'Serviço concluído', 'Faturado', 'Recebido', 'Entregue', 'Concluída'].includes(s)) return 'g'
+/**
+ * Cor de cada situação (classe CSS). Cada estado tem uma cor fixa:
+ * b diagnóstico (azul) · y orçamento (amarelo) · o aguardando aprovação/pendência (laranja) · g aprovado/ok (verde)
+ * x em execução (vermelho) · v espera (violeta) · w finalizado (branco/verde) · r recusado/cancelado/vencido
+ */
+export type Tom = '' | 'b' | 'y' | 'o' | 'g' | 'x' | 'v' | 'w' | 'r'
+export function tom(s: string): Tom {
+  if (s === 'Aguardando avaliação') return 'b'
+  if (['Aguardando orçamento', 'Orçamento enviado'].includes(s)) return 'y'
+  if (['Aguardando aprovação', 'Em negociação', 'Parcialmente faturado', 'Aguardando emissão', 'Parcialmente recebido', 'Aguardando conferência'].includes(s)) return 'o'
+  if (['Aprovado', 'Aguardando início', 'Faturado', 'Recebido', 'Entregue', 'Concluída'].includes(s)) return 'g'
+  if (s === 'Em execução') return 'x'
+  if (ESPERAS.includes(s)) return 'v'
+  if (s === 'Serviço concluído') return 'w'
   if (['Recusado', 'Cancelado', 'Nota cancelada', 'Vencido', 'Arquivado'].includes(s)) return 'r'
-  if (['Aguardando aprovação', 'Em negociação', 'Aguardando peças', 'Parcialmente faturado', 'Aguardando autorização complementar', 'Aguardando serviço terceirizado', 'Orçamento enviado', 'Aguardando emissão', 'Parcialmente recebido'].includes(s)) return 'o'
   return ''
+}
+
+/** Estado que resume o atendimento no cartão e na ficha (a etapa mais adiantada vale). */
+export function estadoPrincipal(a: Atendimento): { t: string; tom: Tom } {
+  if (a.sit_fisica !== 'patio') return { t: FISICA[a.sit_fisica], tom: 'g' }
+  if (a.sit_operacional === 'Serviço concluído') return { t: 'Finalizado', tom: 'w' }
+  if (ESPERAS.includes(a.sit_operacional)) return { t: a.sit_operacional, tom: 'v' }
+  if (a.sit_operacional === 'Em execução') return { t: 'Em execução', tom: 'x' }
+  if (['Recusado', 'Cancelado'].includes(a.sit_comercial)) return { t: a.sit_comercial, tom: 'r' }
+  if (a.sit_comercial === 'Aprovado') return { t: 'Aprovado', tom: 'g' }
+  if (['Orçamento enviado', 'Aguardando aprovação', 'Em negociação'].includes(a.sit_comercial)) return { t: 'Aguardando aprovação', tom: 'o' }
+  if (a.sit_comercial === 'Aguardando orçamento' && (a.orcamento_revisoes ?? []).length === 0) return { t: 'Diagnóstico', tom: 'b' }
+  return { t: 'Orçamento', tom: 'y' }
 }
