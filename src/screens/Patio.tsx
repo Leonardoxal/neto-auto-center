@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
 import { faturado, alerta, LISTAS, OPERACIONAL, naOficina, comCondutor, noPatio, semAtualizacao, tempoNoPatio, ultimaAtualizacao, type Atendimento } from '../lib/domain'
 import { dur, fDataHora } from '../lib/format'
 import { useStore } from '../lib/store'
@@ -13,8 +14,10 @@ export function Patio({ lista: inicial, onBack }: { lista?: string; onBack?: () 
   const [seg, setSeg] = useState(inicial || 'todos')
   const [view, setView] = useState<'etapas' | 'tabela' | 'quadro'>(() => { const v = lembrar('patio-view'); return v === 'tabela' || v === 'quadro' ? v : 'etapas' })
   const [q, setQ] = useState(''); const [loc, setLoc] = useState(''); const [resp, setResp] = useState(''); const [ord, setOrd] = useState('tempo')
+  const [desde, setDesde] = useState(''); const [minDias, setMinDias] = useState(0)
   const L = LISTAS[seg] ?? LISTAS.todos
   const rows = ativos.filter(L.f).filter(a => (!loc || a.locadora_id === loc) && (!resp || a.responsavel === resp)
+    && (!desde || +new Date(a.entrada) >= +new Date(`${desde}T00:00:00-04:00`)) && tempoNoPatio(a) >= minDias * 864e5
     && (!q || `${a.placa} ${a.modelo} ${locNome(a.locadora_id)} ${a.protocolo} ${a.os} ${a.numero}`.toUpperCase().includes(q.toUpperCase().trim())))
     .sort((a, b) => ord === 'tempo' ? tempoNoPatio(b) - tempoNoPatio(a) : ord === 'parado' ? semAtualizacao(b) - semAtualizacao(a) : +new Date(b.entrada) - +new Date(a.entrada))
   const resps = [...new Set(ativos.map(a => a.responsavel).filter(Boolean))]
@@ -30,6 +33,8 @@ export function Patio({ lista: inicial, onBack }: { lista?: string; onBack?: () 
       <div className="toolbar" style={{ marginTop: 0 }}>
         <select id="ploc" value={loc} onChange={e => setLoc(e.target.value)} aria-label="Locadora"><option value="">Todas as locadoras</option>{locadoras.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}</select>
         <select id="presp" value={resp} onChange={e => setResp(e.target.value)} aria-label="Responsável"><option value="">Todos os responsáveis</option>{resps.map(r => <option key={r}>{r}</option>)}</select>
+        <select id="pdias" value={minDias} onChange={e => setMinDias(+e.target.value)} aria-label="Tempo no pátio"><option value={0}>Qualquer tempo no pátio</option>{[1, 3, 7, 15, 30].map(d => <option key={d} value={d}>No pátio há {d}+ dia{d > 1 ? 's' : ''}</option>)}</select>
+        <label className="search" style={{ flex: '0 0 auto', padding: '0 8px' }} title="Entrada a partir de">Entrada desde<input id="pdesde" type="date" value={desde} onChange={e => setDesde(e.target.value)} style={{ padding: '6px 0', fontSize: 13.5 }} /></label>
         <select id="psort" value={ord} onChange={e => setOrd(e.target.value)} aria-label="Ordenar"><option value="tempo">Mais tempo no pátio</option><option value="parado">Mais tempo sem atualização</option><option value="recente">Entrada mais recente</option></select>
         <Seg value={view} onChange={mudarView} options={[['etapas', 'Etapas'], ['tabela', 'Tabela'], ['quadro', 'Quadro']]} />
       </div>
@@ -54,7 +59,13 @@ export function Patio({ lista: inicial, onBack }: { lista?: string; onBack?: () 
 }
 
 export function Inicio() {
-  const { ativos, me } = useStore(); const nav = useNav(); const entrada = useEntrada()
+  const { ativos, me, versao } = useStore(); const nav = useNav(); const entrada = useEntrada()
+  const [entreguesHoje, setEntreguesHoje] = useState<number | null>(null)
+  useEffect(() => { // entregues não estão em "ativos" (só o pátio): conta direto no banco, desde 00h de Cuiabá
+    const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Cuiaba' }).format(new Date())
+    supabase.from('atendimentos').select('id', { count: 'exact', head: true }).eq('sit_fisica', 'entregue').gte('saida', new Date(`${hoje}T00:00:00-04:00`).toISOString())
+      .then(r => setEntreguesHoje(r.error ? null : r.count ?? 0))
+  }, [versao])
   const P = ativos.filter(noPatio)
   const n = (k: string) => ativos.filter(LISTAS[k].f).length
   const parados = (d: number) => P.filter(a => semAtualizacao(a) > d * 864e5).length
@@ -74,9 +85,11 @@ export function Inicio() {
         <Tile label="Com o condutor" value={P.filter(comCondutor).length} foot="atendimento ativo, veículo fora" cls={P.filter(comCondutor).length ? 'warn' : ''} onClick={lista('fora')} />
         <Tile label="Aguardando orçamento" value={n('orc')} onClick={lista('orc')} />
         <Tile label="Aguardando aprovação" value={n('aprov')} cls={n('aprov') ? 'warn' : ''} onClick={lista('aprov')} />
+        <Tile label="Aprovados" value={n('aprovados')} foot="ainda em serviço" onClick={lista('aprovados')} />
         <Tile label="Em execução" value={n('exec')} onClick={lista('exec')} />
         <Tile label="Aguardando peças" value={n('pecas')} cls={n('pecas') ? 'warn' : ''} onClick={lista('pecas')} />
         <Tile label="Prontos para entrega" value={n('prontos')} onClick={lista('prontos')} />
+        <Tile label="Entregues hoje" value={entreguesHoje ?? '—'} foot="saíram do pátio hoje" />
       </div>
       <h3 className="sh" style={{ marginTop: 16 }}>Parados sem atualização</h3>
       <div className="stops">{[3, 7, 15, 30].map(d => <button key={d} className={parados(d) && d >= 7 ? 'hot' : ''} onClick={() => nav.push({ r: 'parados', id: String(d) })}><b>{parados(d)}</b><span>+ de {d} dias</span></button>)}</div>

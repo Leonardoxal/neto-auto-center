@@ -79,6 +79,8 @@ describe('pátio e faturamento', () => {
     expect(LISTAS.todos.f(a)).toBe(true)
     expect(LISTAS.aprov.f(a)).toBe(false)
     expect(LISTAS.fatserv.f(a)).toBe(true)
+    expect(LISTAS.aprovados.f(a)).toBe(true)
+    expect(LISTAS.aprovados.f(base({ sit_comercial: 'Aprovado', sit_operacional: 'Serviço concluído' }))).toBe(false)
   })
   it('nota cancelada não soma no faturado', () => {
     const a = base({ notas_fiscais: [{ id: 'n', tipo: 'NFS-e', numero: '1', serie: '1', valor: 1000, emissao: iso(H), cancelada: true }] })

@@ -114,6 +114,7 @@ export const LISTAS: Record<string, { t: string; f: (a: Atendimento) => boolean 
   fora: { t: 'Com o condutor', f: a => comCondutor(a) },
   orc: { t: 'Aguardando orçamento', f: a => noPatio(a) && a.sit_comercial === 'Aguardando orçamento' },
   aprov: { t: 'Aguardando aprovação', f: a => noPatio(a) && ['Orçamento enviado', 'Aguardando aprovação', 'Em negociação'].includes(a.sit_comercial) },
+  aprovados: { t: 'Aprovados', f: a => noPatio(a) && a.sit_comercial === 'Aprovado' && a.sit_operacional !== 'Serviço concluído' },
   exec: { t: 'Em execução', f: a => noPatio(a) && a.sit_operacional === 'Em execução' },
   pecas: { t: 'Aguardando peças', f: a => noPatio(a) && a.sit_operacional === 'Aguardando peças' },
   afat: { t: 'Aguardando faturamento', f: a => noPatio(a) && a.sit_operacional === 'Serviço concluído' && a.sit_fiscal !== 'Faturado' },
