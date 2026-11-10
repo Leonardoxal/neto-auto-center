@@ -74,7 +74,12 @@ export function Ficha({ id }: { id: string }) {
           return run('registrar_desconto', { p_solicitado: sol, p_concedido: conc, p_pedido_em: deInputLocal(f.t), p_resposta_em: deInputLocal(f.r), p_motivo: f.motivo })
         } })
     }],
-    ['aprov', 'Aprovar', 'check', 'aprovar', () => {
+    a.aprovado_em && noPatio(a) ? ['aprov', 'Desfazer aprovação', 'undo', 'aprovar', () => sheet.open({ title: 'Desfazer aprovação', saveLabel: 'Desfazer', done: 'Aprovação desfeita. O orçamento voltou para aguardando aprovação.',
+      body: <><div className="hint warn">Aprovado em {fDataHora(a.aprovado_em)}{a.valor_aprovado != null ? ` por ${brl(+a.valor_aprovado)}` : ''}. A aprovação é anulada e o orçamento volta para "Aguardando aprovação". O histórico guarda a aprovação e a anulação.</div>
+        <Fg><Field label="Motivo" col><textarea name="m" placeholder="Ex.: aprovado por engano" /></Field></Fg>
+        <Note>Itens aprovados voltam a "proposto"; itens retirados na aprovação podem ser restaurados um a um. Só dá para desfazer antes de o serviço começar. O aviso já enviado pelo WhatsApp não é apagado.</Note></>,
+      onSave: f => run('desfazer_aprovacao', { p_motivo: f.m ?? '' }) })] as [string, string, string, Acao | null, () => void]
+    : ['aprov', 'Aprovar', 'check', 'aprovar', () => {
       if (a.aprovado_em) { sheet.toast(`Já aprovado em ${fDataHora(a.aprovado_em)}.`); return }
       if (itens.some(i => i.status === 'Proposto')) { sheet.open({ title: 'Aprovar orçamento', done: 'Aprovado. O veículo continua no pátio.',
         body: <AprovarItensCorpo a={a} itens={itens} />,
