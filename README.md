@@ -51,6 +51,12 @@ As permissões são verificadas no banco (funções `security definer` + RLS), n
 - Fuso: America/Cuiaba (UTC−4).
 
 ## Desenvolvimento
+### Notas de compra
+
+A área de notas de compra e a regra de exclusão estão descritas em [docs/NOTAS_COMPRA.md](docs/NOTAS_COMPRA.md).
+Os conectores de busca fiscal e confirmação de entrada no TGA ainda precisam ser configurados e implementados;
+a tela não consulta a SEFAZ nem detecta entradas no TGA por conta própria.
+
 ```bash
 cp .env.example .env.local   # preencha com os dados do Supabase
 npm install
