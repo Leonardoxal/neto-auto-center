@@ -67,7 +67,9 @@ export function vencimentos(parcelas, hoje) {
     return [...m].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c, v]) => `• ${c}: ${brl(v)}`)
   }
   // um bloco por dia, de hoje até daqui a 7 dias, com os clientes que vencem nele
-  const L = [CABECALHO, `VENCIMENTOS — ${fData(`${hoje}T12:00:00Z`)}`]
+  const ontem = new Date(Date.parse(`${hoje}T12:00:00Z`) - DIA).toISOString().slice(0, 10)
+  const venceuOntem = parcelas.filter(p => p.vencimento === ontem)
+  const L = [CABECALHO, `VENCIMENTOS — ${fData(`${hoje}T12:00:00Z`)}`, '', linha(`VENCEU ONTEM (${fData(`${ontem}T12:00:00Z`).slice(0, 5)}), COBRAR`, venceuOntem), ...porCliente(venceuOntem)]
   for (let i = 0; i <= 7; i++) {
     const d = new Date(Date.parse(`${hoje}T12:00:00Z`) + i * DIA).toISOString().slice(0, 10)
     const doDia = parcelas.filter(p => p.vencimento === d)

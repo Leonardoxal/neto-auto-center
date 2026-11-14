@@ -12,6 +12,7 @@ test('vencimentos separa hoje, amanhã, 7 dias e atrasado', () => {
   assert.match(t, /\(18\/11\): nada/)
   assert.doesNotMatch(t, /999,00/) // depois de 7 dias não entra
   assert.match(t, /ATRASADO: R\$\s100,00 em 1/)
+  assert.match(t, /VENCEU ONTEM \(14\/11\), COBRAR: R\$\s100,00 em 1 parcela\(s\)\n• A: R\$\s100,00/)
   assert.match(vencimentos([], '2026-11-15'), /ATRASADO: nada/)
 })
 
