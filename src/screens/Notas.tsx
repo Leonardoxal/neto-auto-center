@@ -7,6 +7,7 @@ import type { NotaXML } from '../lib/xmlnotas'
 import type { Relatorio } from '../lib/relatorios'
 import { Field, Fg, Ic, Nav, Note, Plate, Section, Seg, Select, Tile, useSheet } from '../ui/ui'
 import { useNav } from './comum'
+import { BaixasTga } from './BaixasTga'
 
 const FMT = { day: '2-digit', month: '2-digit' } as const
 const dm = (iso: string) => new Date(iso + 'T12:00:00Z').toLocaleDateString('pt-BR', { ...FMT, timeZone: 'UTC' })
@@ -103,6 +104,7 @@ export function Notas() {
   const [seg, setSeg] = useState<'aberto' | 'vencidas' | 'recebidas' | 'todas'>('aberto')
   const [q, setQ] = useState(''); const [cli, setCli] = useState(''); const [tipo, setTipo] = useState(''); const [forma, setForma] = useState('')
   const [sel, setSel] = useState<Set<string> | null>(null)
+  const [tga, setTga] = useState(false)
   const recarregar = () => setV(x => x + 1)
   useEffect(() => { carregar().then(setNotas).catch(e => setErro(msgErro(e))) }, [v, store.versao])
 
@@ -131,6 +133,7 @@ export function Notas() {
   const em7 = todas.reduce((s, n) => s + n.parcelas.filter(p => p.vencimento >= d && p.vencimento <= somaDias(d, 7)).reduce((x, p) => x + saldoParcela(n, p), 0), 0)
   const mes = d.slice(0, 7), recMes = todas.flatMap(n => n.recebimentos).filter(r => !r.estornado_em && r.data.slice(0, 7) === mes).reduce((s, r) => s + +r.valor, 0)
   const podeEditar = store.pode('financeira')
+  if (tga) return <><Nav title="Baixas do TGA" sub="Ligue cada PV do TGA às notas de serviço e de peça" right={<button className="tbtn" onClick={() => { setTga(false); recarregar() }}>Voltar</button>} /><BaixasTga podeEditar={podeEditar} /></>
 
   // ---------- ações ----------
   const receber = (n: Nota, p: Parcela) => sheet.open({ title: `Receber ${p.numero}ª parcela`, done: 'Recebimento registrado', saveLabel: 'Registrar',
@@ -272,6 +275,7 @@ export function Notas() {
           {podeEditar && <button className="btn ghost sm" onClick={() => setSel(sel ? null : new Set())}>{sel ? 'Cancelar seleção' : 'Selecionar'}</button>}
           {sel && <button className="btn sm" onClick={receberLote} disabled={!sel.size}>Receber {sel.size || ''} selecionada(s)</button>}
           {podeEditar && !sel && <button className="btn ghost sm" onClick={manual}>+ Nota manual</button>}
+          {!sel && <button className="btn ghost sm" onClick={() => setTga(true)}>Baixas do TGA</button>}
           <button className="btn ghost sm" onClick={() => exportar('pdf')}>PDF</button>
           <button className="btn ghost sm" onClick={() => exportar('csv')}>CSV</button>
         </div>
