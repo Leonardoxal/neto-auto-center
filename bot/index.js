@@ -213,7 +213,7 @@ async function relatorios() {
   } catch (e) { log('relatório: banco indisponível, tento de novo:', e.message) }
 }
 
-// ---------- aviso diário de vencimentos das notas (só administradores; uma vez por dia, ao ligar ou no horário VENCIMENTOS) ----------
+// ---------- aviso diário de vencimentos das notas (quem recebe relatórios; uma vez por dia, ao ligar ou no horário VENCIMENTOS) ----------
 const VENCIMENTOS = process.env.RELATORIO_VENCIMENTOS || '08:00'
 let vencAoLigar = true
 async function vencimentosDoDia() {
@@ -221,7 +221,7 @@ async function vencimentosDoDia() {
   const agora = minutos(horaLocal())
   if (estado.venc === hoje || !(vencAoLigar || (agora >= minutos(VENCIMENTOS) && agora < minutos(VENCIMENTOS) + JANELA_RELATORIO_MIN))) return
   try {
-    const destino = (await listaAutorizados()).filter(a => a.papel === 'admin' && a.recebe_relatorios).map(a => a.telefone)
+    const destino = (await listaAutorizados()).filter(a => a.recebe_relatorios).map(a => a.telefone)
     await enviar(destino, txt.vencimentos(await banco.parcelasAbertas(), hoje))
     estado.venc = hoje; salvar(); vencAoLigar = false
     log(`vencimentos enviados para ${destino.length} número(s)`)
