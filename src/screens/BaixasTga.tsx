@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { brl, fData } from '../lib/format'
 import { supabase, msgErro } from '../lib/supabase'
-import { FAIXAS_ATRASO, faixaAtraso } from '../lib/gestao'
-import { Fg, Note, Section, Seg, Tile, useSheet } from '../ui/ui'
+import { Fg, Note, Section, Tile, useSheet } from '../ui/ui'
 
 // Baixas importadas do TGA que ainda não entraram em nenhuma nota. Um PV do TGA é a soma da nota de serviço e da nota de peça:
 // aqui a pessoa confere a sugestão e liga o PV às notas; as próximas baixas desse PV entram sozinhas.
@@ -12,78 +11,7 @@ interface NotaRes { id: string; tipo: string; numero: string; numero_rps: string
 const ROTULO: Record<string, string> = { sem_nota: 'Sem nota ligada', ambigua: 'Mais de uma nota', excede_saldo: 'Acima do saldo', revisar: 'Conferir no TGA' }
 const dia = (iso: string) => fData(iso + 'T12:00:00')
 
-async function pegar<T>(consulta: (de: number, ate: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>): Promise<T[]> {
-  const out: T[] = []
-  for (let de = 0; ; de += 1000) {
-    const { data, error } = await consulta(de, de + 999)
-    if (error) throw new Error(error.message)
-    out.push(...((data ?? []) as T[])); if (!data || data.length < 1000) return out
-  }
-}
-
 export function BaixasTga({ podeEditar }: { podeEditar: boolean }) {
-  const [vista, setVista] = useState<'locadoras' | 'particulares'>('particulares')
-  return <>
-    <div className="stack" style={{ marginBottom: 12 }}>
-      <Seg value={vista} onChange={setVista} options={[['particulares', 'Particulares (por PV)'], ['locadoras', 'Locadoras (ligar às notas)']]} />
-    </div>
-    {vista === 'locadoras' ? <LigarNotas podeEditar={podeEditar} /> : <Particulares />}
-  </>
-}
-
-// Cliente particular vale o PV (a duplicata do TGA), mesmo que tenha nota fiscal: a posição vem do último "A Receber, Em Aberto" importado.
-interface Aberto { documento: string; doc_numero: string; emissao: string; vencimento: string; valor_total: number; dias_atraso: number; cliente_codigo: string; tipo_doc: string }
-function Particulares() {
-  const [dados, setDados] = useState<{ em: string; pvs: { chave: string; doc: string; cliente: string; emissao: string; venc: string; total: number; dias: number }[] } | null | 'vazio'>(null)
-  const [erro, setErro] = useState('')
-  useEffect(() => {
-    (async () => {
-      const { data: imp, error } = await supabase.from('tga_importacoes').select('id,em').eq('relatorio', 'em_aberto').order('em', { ascending: false }).limit(1)
-      if (error) throw new Error(error.message)
-      if (!imp?.length) return setDados('vazio')
-      const [clientes, linhas] = await Promise.all([
-        pegar<{ codigo: string }>((a, b) => supabase.from('tga_clientes').select('codigo').eq('tipo', 'particular').order('codigo').range(a, b)),
-        pegar<Aberto>((a, b) => supabase.from('tga_em_aberto').select('documento,doc_numero,emissao,vencimento,valor_total,dias_atraso,cliente_codigo,tipo_doc').eq('importacao_id', imp[0].id).order('id').range(a, b))
-      ])
-      const part = new Set(clientes.map(c => c.codigo))
-      const m = new Map<string, { chave: string; doc: string; cliente: string; emissao: string; venc: string; total: number; dias: number }>()
-      for (const l of linhas) {
-        if (!part.has(l.cliente_codigo) || l.tipo_doc === 'DV') continue
-        const k = `${l.doc_numero}|${l.emissao}`
-        const g = m.get(k) ?? m.set(k, { chave: k, doc: l.doc_numero, cliente: l.cliente_codigo, emissao: l.emissao, venc: l.vencimento, total: 0, dias: 0 }).get(k)!
-        g.total += +l.valor_total; g.dias = Math.max(g.dias, l.dias_atraso); if (l.vencimento < g.venc) g.venc = l.vencimento
-      }
-      setDados({ em: imp[0].em, pvs: [...m.values()].sort((a, b) => b.dias - a.dias) })
-    })().catch(e => setErro(msgErro(e)))
-  }, [])
-  if (erro) return <div className="banner">{/tga_/.test(erro) ? 'Falta aplicar a atualização 0015 do banco no Supabase.' : erro}</div>
-  if (dados === null) return <div className="loading">Carregando…</div>
-  if (dados === 'vazio') return <div className="group"><div className="empty">Nenhum "A Receber, Em Aberto" importado ainda. Importe com scripts/importar-tga.mjs.</div></div>
-  const { pvs } = dados, soma = (l: typeof pvs) => l.reduce((s, p) => s + p.total, 0)
-  const vencidos = pvs.filter(p => p.dias > 0)
-  return <>
-    <div className="tiles t4">
-      <Tile label="Em aberto" value={brl(soma(pvs))} money foot={`${pvs.length} PVs`} />
-      <Tile label="Vencido" value={brl(soma(vencidos))} money cls={vencidos.length ? 'crit' : ''} foot={`${vencidos.length} PVs`} />
-      <Tile label="A vencer" value={brl(soma(pvs) - soma(vencidos))} money foot={`${pvs.length - vencidos.length} PVs`} />
-      <Tile label="Posição de" value={dia(dados.em.slice(0, 10))} foot="último Em Aberto importado" />
-    </div>
-    <Section title="Atraso por faixa">
-      <div className="tblwrap"><table><thead><tr><th>Faixa</th><th className="num">PVs</th><th className="num">Valor</th></tr></thead>
-        <tbody>{FAIXAS_ATRASO.map(f => { const l = pvs.filter(p => faixaAtraso(p.dias) === f); return <tr key={f}><td>{f}</td><td className="num">{l.length}</td><td className="num">{brl(soma(l))}</td></tr> })}</tbody></table></div>
-    </Section>
-    <Section title={`${pvs.length} PVs de clientes particulares em aberto`}>
-      {!pvs.length ? <div className="group"><div className="empty">Nenhum cliente particular com PV em aberto.</div></div>
-        : <div className="group">{pvs.slice(0, 300).map(p => <div key={p.chave} className="row" style={{ alignItems: 'flex-start' }}>
-          <div className="rm"><div className="r1"><b>PV {p.doc.replace(/^0+/, '')}</b><span className="tag">{p.cliente}</span></div>
-            <span className="r2">Emissão {dia(p.emissao)} · vencimento {dia(p.venc)}</span></div>
-          <div className="rr"><span className="big">{brl(p.total)}</span><span className={`pill ${p.dias > 30 ? 'r' : p.dias > 0 ? 'o' : ''}`}>{p.dias > 0 ? `${p.dias} dias de atraso` : 'a vencer'}</span></div>
-        </div>)}</div>}
-    </Section>
-  </>
-}
-
-function LigarNotas({ podeEditar }: { podeEditar: boolean }) {
   const sheet = useSheet()
   const [baixas, setBaixas] = useState<Baixa[] | null>(null); const [erro, setErro] = useState(''); const [v, setV] = useState(0)
   useEffect(() => {

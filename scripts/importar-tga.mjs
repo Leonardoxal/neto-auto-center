@@ -62,7 +62,10 @@ const hash = createHash('sha256').update(JSON.stringify(r.linhas.map(l => l.chav
 // Locadora x particular: o nome do cliente no TGA só é comparado aqui, no computador; o banco recebe apenas o código e o tipo.
 const { data: locadoras, error: erroLoc } = await supabase.from('locadoras').select('id,nome').eq('ativo', true)
 if (erroLoc) sai(`Não consegui ler as locadoras: ${erroLoc.message}`)
-const clientes = Object.fromEntries(Object.entries(r.clientes).map(([codigo, nome]) => [codigo, classificarCliente(nome, locadoras)]))
+const clientes = Object.fromEntries(Object.entries(r.clientes).map(([codigo, nome]) => [codigo, { ...classificarCliente(nome, locadoras), nome }]))
+// o nome só vai para o cadastro de clientes do banco (leitura restrita a Administrador e Gerência), para a aba Cobranças
+const { error: erroClientes } = await supabase.rpc('atualizar_clientes_tga', { p_clientes: clientes })
+if (erroClientes) sai(`Não consegui atualizar o cadastro de clientes (falta aplicar a migração 0016?): ${erroClientes.message}`)
 const nLoc = Object.values(clientes).filter(c => c.tipo === 'locadora').length
 console.log(`Clientes: ${Object.keys(clientes).length} (${nLoc} locadora, ${Object.keys(clientes).length - nLoc} particular)`)
 const { data, error } = await supabase.rpc('importar_tga', {

@@ -76,7 +76,8 @@ Pendente: acesso ao banco do TGA.
 - **Demais clientes (particulares)** valem só pelo PV, mesmo que tenham nota. A posição vem do último "A Receber, Em Aberto" importado (aba Particulares: em aberto, vencido, atraso por faixa, lista de PVs) e não precisa de ligação com nota.
 - **Como o sistema decide:** o nome do cliente no TGA é comparado, no computador de quem importa, com o nome das locadoras cadastradas (sem acento nem espaço: qualquer nome com LOCALIZA vira Localiza). O banco recebe só o código do cliente no TGA (`tga_clientes`: código, tipo, locadora), nunca o nome nem o telefone. Cliente que passa a ser locadora volta sozinho para a fila de ligação.
 - **Formatos:** Baixados pelo PDF (`pdftotext`); Em Aberto pelo `.xls`/`.xlsx` (lido pelo Excel em `scripts/xls-para-json.ps1`, precisa do Excel instalado). Com a planilha real: 2.121 linhas, soma conferida com o rodapé.
-- **Pendência:** a tela mostra o código do cliente (ex.: `C02170`), não o nome. Mostrar o nome exigiria gravá-lo no banco (restrito a Administrador e Gerência); decidir com o responsável.
+- **Nome do cliente (decidido em 14/11/2026):** a migração `0016` guarda o nome em `tga_clientes.nome` (dado pessoal; leitura só de Administrador e Gerência, nunca em log, teste ou repositório). A aba **Cobranças** lista os particulares pelo cadastro do cliente.
+- **Telas (14/11/2026):** aba **Financeiro** reúne Notas fiscais, Cobranças e Compras. **Baixas do TGA** (dentro de Notas) mostra só locadoras, que são controladas por nota fiscal; **Cobranças** mostra só particulares, por cliente e por PV.
 
 ### Lançamentos internos e serviço à vista (relato do responsável, 14/11/2026)
 

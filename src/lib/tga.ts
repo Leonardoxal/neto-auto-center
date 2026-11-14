@@ -1,6 +1,7 @@
 ﻿// Leitor dos relatórios do TGA "Lançamentos: A Receber, Em Aberto" e "A Receber, Baixados" (PDF -> `pdftotext -raw`).
 // Só entram documento (com sufixo de parcela), datas, tipo, portador, valores e o código do cliente no TGA (ex.: C02170).
-// O nome do cliente só é lido para classificar locadora x particular, em `ResultadoTga.clientes`, e nunca vai para o banco. O telefone é ignorado.
+// O nome do cliente vem em `ResultadoTga.clientes` (classificar locadora x particular e mostrar a aba Cobranças) e vai só para o cadastro
+// `tga_clientes` do banco, com leitura restrita a Administrador e Gerência; nunca nas linhas, em log ou teste. O telefone é ignorado.
 // Valores em centavos inteiros. O leitor confere cada linha (principal + juros + multa - desconto = pago) e a soma das linhas
 // contra os totais do rodapé, por cliente e geral, e acusa divergência em vez de aceitar em silêncio.
 //
@@ -40,7 +41,7 @@ export interface ResultadoTga {
   linhas: LinhaTga[]
   soma: Totais
   rodape: Partial<Totais> & { semDevolucao?: number; devolucoes?: number }
-  /** código do cliente -> nome. Só para uso local (classificar locadora x particular); não enviar ao banco. */
+  /** código do cliente -> nome. Dado pessoal: só para o cadastro `tga_clientes`, nunca nas linhas nem em log. */
   clientes: Record<string, string>
   /** preenchido por semConsumidores: linhas de cliente consumidor que ficaram de fora */
   descartadas?: { linhas: number; pago: number }
