@@ -14,6 +14,8 @@ test('vencimentos separa hoje, amanhã, 7 dias e atrasado', () => {
   assert.match(t, /ATRASADO: R\$\s100,00 em 1/)
   assert.match(t, /VENCEU ONTEM \(14\/11\), COBRAR: R\$\s100,00 em 1 parcela\(s\)\n• A: R\$\s100,00/)
   assert.match(vencimentos([], '2026-11-15'), /ATRASADO: nada/)
+  const d = vencimentos([{ cliente: 'A', nota: '4653', vencimento: '2026-11-10', saldo: 100 }], '2026-11-15')
+  assert.match(d, /◦ nota 4653: R\$\s100,00 · venceu 10\/11, 5 dia\(s\) de atraso/)
 })
 
 // 06/11/2026 18h00 em Cuiabá (UTC−4) = 22h00 UTC

@@ -62,9 +62,21 @@ export function vencimentos(parcelas, hoje) {
   const soma = l => l.reduce((s, p) => s + p.saldo, 0)
   const atrasadas = parcelas.filter(p => p.vencimento < hoje)
   const linha = (nome, l) => `${nome}: ${l.length ? `${brl(soma(l))} em ${l.length} parcela(s)` : 'nada'}`
-  const porCliente = l => {
-    const m = new Map(); for (const p of l) m.set(p.cliente, (m.get(p.cliente) ?? 0) + p.saldo)
-    return [...m].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c, v]) => `• ${c}: ${brl(v)}`)
+  // detalhe: cada cliente com o total e uma linha por parcela (nota e valor), até MAX_DETALHE parcelas por bloco
+  const MAX_DETALHE = 12
+  const porCliente = (l, comDias = false) => {
+    const m = new Map(); for (const p of l) (m.get(p.cliente) ?? m.set(p.cliente, []).get(p.cliente)).push(p)
+    const out = []; let n = 0
+    for (const [c, ps] of [...m].sort((a, b) => soma(b[1]) - soma(a[1]))) {
+      out.push(`• ${c}: ${brl(soma(ps))} (${ps.length} parcela${ps.length > 1 ? 's' : ''})`)
+      for (const p of [...ps].sort((a, b) => a.vencimento.localeCompare(b.vencimento))) {
+        if (n++ >= MAX_DETALHE) break
+        const atraso = comDias ? ` · venceu ${fData(`${p.vencimento}T12:00:00Z`).slice(0, 5)}, ${Math.round((Date.parse(`${hoje}T12:00:00Z`) - Date.parse(`${p.vencimento}T12:00:00Z`)) / DIA)} dia(s) de atraso` : ''
+        out.push(`   ◦ ${p.nota ? `nota ${p.nota}` : 'nota'}: ${brl(p.saldo)}${atraso}`)
+      }
+    }
+    if (n > MAX_DETALHE) out.push(`   … e mais ${n - MAX_DETALHE} parcela(s)`)
+    return out
   }
   // um bloco por dia, de hoje até daqui a 7 dias, com os clientes que vencem nele
   const ontem = new Date(Date.parse(`${hoje}T12:00:00Z`) - DIA).toISOString().slice(0, 10)
@@ -76,7 +88,7 @@ export function vencimentos(parcelas, hoje) {
     const rot = i === 0 ? 'HOJE' : i === 1 ? 'AMANHÃ' : fmt(`${d}T12:00:00Z`, { weekday: 'long' }).toUpperCase()
     L.push('', linha(`${rot} (${fData(`${d}T12:00:00Z`).slice(0, 5)})`, doDia), ...porCliente(doDia))
   }
-  L.push('', linha('ATRASADO', atrasadas), ...porCliente(atrasadas))
+  L.push('', linha('ATRASADO', atrasadas), ...porCliente(atrasadas, true))
   return L.join('\n')
 }
 

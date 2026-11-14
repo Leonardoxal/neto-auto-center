@@ -44,13 +44,13 @@ export async function parcelasAbertas() {
     }
   }
   const [notas, parcelas, receb] = await Promise.all([
-    todas('notas', 'id,cliente,cancelada', 'id'), todas('nota_parcelas', 'id,nota_id,vencimento,valor', 'id'),
+    todas('notas', 'id,cliente,cancelada,numero,numero_rps', 'id'), todas('nota_parcelas', 'id,nota_id,vencimento,valor', 'id'),
     todas('nota_recebimentos', 'id,parcela_id,valor,estornado_em', 'id')])
   const nota = new Map(notas.filter(n => !n.cancelada).map(n => [n.id, n]))
   const pago = new Map()
   for (const r of receb) if (!r.estornado_em) pago.set(r.parcela_id, (pago.get(r.parcela_id) ?? 0) + +r.valor)
   return parcelas.filter(p => nota.has(p.nota_id))
-    .map(p => ({ cliente: nota.get(p.nota_id).cliente, vencimento: p.vencimento, saldo: Math.round((+p.valor - (pago.get(p.id) ?? 0)) * 100) / 100 }))
+    .map(p => ({ cliente: nota.get(p.nota_id).cliente, nota: nota.get(p.nota_id).numero_rps || nota.get(p.nota_id).numero, vencimento: p.vencimento, saldo: Math.round((+p.valor - (pago.get(p.id) ?? 0)) * 100) / 100 }))
     .filter(p => p.saldo > 0.009)
 }
 
