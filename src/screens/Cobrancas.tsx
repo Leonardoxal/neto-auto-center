@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { brl, fData } from '../lib/format'
 import { FAIXAS_ATRASO, faixaAtraso } from '../lib/gestao'
+import { pegar } from '../lib/paginar'
 import { supabase, msgErro } from '../lib/supabase'
 import { Ic, Nav, Section, Tile, useSheet } from '../ui/ui'
 
@@ -11,15 +12,6 @@ interface Cliente { codigo: string; nome: string }
 interface Pv { chave: string; doc: string; emissao: string; venc: string; total: number; dias: number }
 interface Devedor { codigo: string; nome: string; total: number; vencido: number; dias: number; pvs: Pv[] }
 const dia = (iso: string) => fData(iso + 'T12:00:00')
-
-async function pegar<T>(consulta: (de: number, ate: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>): Promise<T[]> {
-  const out: T[] = []
-  for (let de = 0; ; de += 1000) {
-    const { data, error } = await consulta(de, de + 999)
-    if (error) throw new Error(error.message)
-    out.push(...((data ?? []) as T[])); if (!data || data.length < 1000) return out
-  }
-}
 
 export function Cobrancas() {
   const sheet = useSheet()

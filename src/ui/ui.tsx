@@ -7,6 +7,7 @@ const P: Record<string, ReactNode> = {
   grid: <><rect x="3.5" y="3.5" width="7" height="7" rx="2" /><rect x="13.5" y="3.5" width="7" height="7" rx="2" /><rect x="3.5" y="13.5" width="7" height="7" rx="2" /><rect x="13.5" y="13.5" width="7" height="7" rx="2" /></>,
   car: <><path d="M5 15.5V11l2.2-5h9.6l2.2 5v4.5" /><path d="M3.5 15.5h17v3h-17z" /><path d="M5 11h14" /></>,
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  cal: <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M4 10h16M8 3v4M16 3v4" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" /></>,
   plus: <path d="M12 5v14M5 12h14" />, chev: <path d="M9 6l6 6-6 6" />, back: <path d="M15 5l-7 7 7 7" />,
   search: <><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></>, check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
