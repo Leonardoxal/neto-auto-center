@@ -85,6 +85,13 @@ Pendente: acesso ao banco do TGA.
 - Serviço que sai com cliente "consumidor" (cadastro sem nome verdadeiro) é pago na hora, com vendedora própria no TGA (a vendedora não aparece nos relatórios A Receber).
 - Decisão: importar tudo e tratar depois. Ainda não há marca para distinguir esses movimentos no Em Aberto e no Baixados (clientes genéricos aparecem com nome como "CLIENTE"). Até lá, podem ser contados como particulares. Pendência para a etapa 2: marcar cliente genérico como `consumidor` (fora de "a receber"), antes de usar os números.
 
+### Entrada simultânea das notas de venda (14/11/2026)
+
+- O computador do responsável é o servidor do TGA (`C:\TGA`, banco Firebird ativo em `D:\TGA\Dados\TGA.FDB`). O TGA grava cada nota emitida em `C:\TGA\NFe\XML\AAAAMM\NFe\*-nfe.xml` e `C:\TGA\NFSe\XML\AAAAMM\Notas\*-nfse.xml`.
+- `scripts/sincronizar-notas.mjs` lê essas pastas (só leitura) e envia as notas novas pela função `importar_notas`, a mesma da importação de ZIP. `--enviar --vigiar` repete a cada 2 minutos; `scripts/sincronizar-notas.cmd` o inicia (atalho em `shell:startup`). O que já foi enviado fica em `scripts/.estado-notas.json` (fora do git).
+- Primeira execução: 343 notas lidas (set a nov), 47 novas e 296 que já existiam, sem duplicar.
+- Não faz: baixas e contas em aberto (o TGA só entrega relatório exportado; o banco Firebird poderia dar isso, mas exige usuário de leitura). A porta 3050 do Firebird está aberta para a rede (`0.0.0.0`): conferir a senha com quem mantém o TGA.
+
 ### Resultado com o PDF real de Baixados (sem expor dados)
 
 2.097 linhas lidas. Soma do valor pago e do valor original iguais ao total do rodapé e aos totais de cada cliente (conferido). 21 linhas não fecham a conta no próprio TGA. Há diferença de centavos em juros no total de alguns clientes (arredondamento do TGA): aparece como aviso, não bloqueia.
