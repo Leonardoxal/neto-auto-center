@@ -34,7 +34,27 @@ export async function doDia(inicio) {
     .or(`entrada.gte.${d},aprovado_em.gte.${d},concluido_em.gte.${d},saida.gte.${d}`)).map(veiculo)
 }
 
-export const umVeiculo = async id => veiculo(ok(await db.from('atendimentos').select(SEL).eq('id', id).single()))
+/** Parcelas de notas fiscais (não canceladas) com saldo em aberto, já descontadas as baixas. */
+export async function parcelasAbertas() {
+  const todas = async (tabela, cols, ordem) => {
+    const out = []
+    for (let de = 0; ; de += 1000) {
+      const r = ok(await db.from(tabela).select(cols).order(ordem).range(de, de + 999))
+      out.push(...r); if (r.length < 1000) return out
+    }
+  }
+  const [notas, parcelas, receb] = await Promise.all([
+    todas('notas', 'id,cliente,cancelada,numero,numero_rps', 'id'), todas('nota_parcelas', 'id,nota_id,vencimento,valor', 'id'),
+    todas('nota_recebimentos', 'id,parcela_id,valor,estornado_em', 'id')])
+  const nota = new Map(notas.filter(n => !n.cancelada).map(n => [n.id, n]))
+  const pago = new Map()
+  for (const r of receb) if (!r.estornado_em) pago.set(r.parcela_id, (pago.get(r.parcela_id) ?? 0) + +r.valor)
+  return parcelas.filter(p => nota.has(p.nota_id))
+    .map(p => ({ cliente: nota.get(p.nota_id).cliente, nota: nota.get(p.nota_id).numero_rps || nota.get(p.nota_id).numero, vencimento: p.vencimento, saldo: Math.round((+p.valor - (pago.get(p.id) ?? 0)) * 100) / 100 }))
+    .filter(p => p.saldo > 0.009)
+}
+
+export const umVeiculo =async id => veiculo(ok(await db.from('atendimentos').select(SEL).eq('id', id).single()))
 
 export async function ultimoEvento() {
   const r = ok(await db.from('eventos').select('id').order('id', { ascending: false }).limit(1))

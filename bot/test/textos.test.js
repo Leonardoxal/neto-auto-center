@@ -1,6 +1,22 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { aprovados, avisoAprovado, inicioDoDia, patio, relatorioFim, relatorioManha } from '../textos.js'
+import { aprovados, avisoAprovado, inicioDoDia, patio, relatorioFim, relatorioManha, vencimentos } from '../textos.js'
+
+test('vencimentos separa hoje, amanhã, 7 dias e atrasado', () => {
+  const p = [{ cliente: 'A', vencimento: '2026-11-14', saldo: 100 }, { cliente: 'B', vencimento: '2026-11-15', saldo: 200 },
+    { cliente: 'C', vencimento: '2026-11-16', saldo: 300 }, { cliente: 'D', vencimento: '2026-11-20', saldo: 400 }, { cliente: 'E', vencimento: '2026-12-30', saldo: 999 }]
+  const t = vencimentos(p, '2026-11-15')
+  assert.match(t, /HOJE \(15\/11\): R\$\s200,00 em 1 parcela\(s\)\n• B: R\$\s200,00/)
+  assert.match(t, /AMANHÃ \(16\/11\): R\$\s300,00 em 1/)
+  assert.match(t, /\(20\/11\): R\$\s400,00 em 1 parcela\(s\)\n• D:/)
+  assert.match(t, /\(18\/11\): nada/)
+  assert.doesNotMatch(t, /999,00/) // depois de 7 dias não entra
+  assert.match(t, /ATRASADO: R\$\s100,00 em 1/)
+  assert.match(t, /VENCEU ONTEM \(14\/11\), COBRAR: R\$\s100,00 em 1 parcela\(s\)\n• A: R\$\s100,00/)
+  assert.match(vencimentos([], '2026-11-15'), /ATRASADO: nada/)
+  const d = vencimentos([{ cliente: 'A', nota: '4653', vencimento: '2026-11-10', saldo: 100 }], '2026-11-15')
+  assert.match(d, /◦ nota 4653: R\$\s100,00 · venceu 10\/11, 5 dia\(s\) de atraso/)
+})
 
 // 06/11/2026 18h00 em Cuiabá (UTC−4) = 22h00 UTC
 const AGORA = Date.parse('2026-11-06T22:00:00Z')

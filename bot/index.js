@@ -25,7 +25,7 @@ const log = (...a) => console.log(new Date().toLocaleString('pt-BR', { timeZone:
 const silencioso = { level: 'silent', child() { return this }, trace() {}, debug() {}, info() {}, warn() {}, error: e => log('baileys:', e?.msg ?? e), fatal: e => log('baileys:', e) }
 
 // ---------- estado salvo em disco: último evento avisado e relatórios já enviados ----------
-let estado = { ultimoEvento: 0, manha: '', fim: '' }
+let estado = { ultimoEvento: 0, manha: '', fim: '', venc: '' }
 try { estado = { ...estado, ...JSON.parse(readFileSync(ARQ_ESTADO, 'utf8')) } } catch { /* primeira execução */ }
 const salvar = () => writeFileSync(ARQ_ESTADO, JSON.stringify(estado, null, 2))
 
@@ -213,6 +213,21 @@ async function relatorios() {
   } catch (e) { log('relatório: banco indisponível, tento de novo:', e.message) }
 }
 
+// ---------- aviso diário de vencimentos das notas (quem recebe relatórios; uma vez por dia, ao ligar ou no horário VENCIMENTOS) ----------
+const VENCIMENTOS = process.env.RELATORIO_VENCIMENTOS || '08:00'
+let vencAoLigar = true
+async function vencimentosDoDia() {
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: txt.FUSO }).format(new Date())
+  const agora = minutos(horaLocal())
+  if (estado.venc === hoje || !(vencAoLigar || (agora >= minutos(VENCIMENTOS) && agora < minutos(VENCIMENTOS) + JANELA_RELATORIO_MIN))) return
+  try {
+    const destino = (await listaAutorizados()).filter(a => a.recebe_relatorios).map(a => a.telefone)
+    await enviar(destino, txt.vencimentos(await banco.parcelasAbertas(), hoje))
+    estado.venc = hoje; salvar(); vencAoLigar = false
+    log(`vencimentos enviados para ${destino.length} número(s)`)
+  } catch (e) { log('vencimentos: banco indisponível, tento de novo:', e.message) }
+}
+
 // ---------- conexão ----------
 const ARQ_QR = fileURLToPath(new URL('qr.html', PASTA))
 const paginaQR = (corpo, atualizar) => writeFile(ARQ_QR, `<!doctype html><meta charset="utf-8">${atualizar ? '<meta http-equiv="refresh" content="3">' : ''}`
@@ -241,8 +256,8 @@ async function conectar() {
     if (connection === 'open') {
       log('Conectado ao WhatsApp.')
       timers.forEach(clearInterval)
-      timers = [setInterval(avisos, INTERVALO_AVISOS), setInterval(relatorios, 30_000)]
-      avisos(); relatorios()
+      timers = [setInterval(avisos, INTERVALO_AVISOS), setInterval(relatorios, 30_000), setInterval(vencimentosDoDia, 30_000)]
+      avisos(); relatorios(); vencimentosDoDia()
     }
     if (connection === 'close') {
       timers.forEach(clearInterval); timers = []
