@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { brl, fData } from '../lib/format'
 import { emCentavos, gradeDoMes, somaPorDia } from '../lib/gestao'
 import { pegar } from '../lib/paginar'
-import { hoje } from '../lib/receber'
+import { hoje, numDoc, saldoParcela } from '../lib/receber'
+import { carregar } from './Notas'
 import { supabase, msgErro } from '../lib/supabase'
 import { Nav, Section, Seg, Tile, useSheet } from '../ui/ui'
 
-// Calendário de entrada: quando cada valor em aberto vence, por dia. A fonte é o último "A Receber, Em Aberto" do TGA
-// (locadoras e particulares), o que de fato está em aberto. Atrasado = venceu e não entrou; não tem data certa de entrada.
+// Calendário de entrada: quando cada valor em aberto vence, por dia. Notas fiscais (locadoras) vêm do saldo das parcelas no site
+// (acompanha as baixas); particulares vêm do último "A Receber, Em Aberto" do TGA. Atrasado = venceu e não entrou; não tem data certa de entrada.
 interface Linha { documento: string; doc_numero: string; vencimento: string; valor_total: number; cliente_codigo: string; tipo_doc: string }
 interface ClienteTga { codigo: string; nome: string; tipo: 'locadora' | 'particular' }
 interface Item { data: string; centavos: number; cliente: string; tipo: 'locadora' | 'particular'; pv: string }
@@ -26,19 +27,31 @@ export function Calendario() {
   const [quem, setQuem] = useState<'todos' | 'locadora' | 'particular'>('todos')
   useEffect(() => {
     (async () => {
+      // Locadoras (notas fiscais): saldo das parcelas no site, já com as baixas. Particulares: último Em Aberto do TGA.
+      const notas = await carregar()
+      const d = hoje()
+      const doSite: Item[] = notas.flatMap(n => n.cancelada ? [] : n.parcelas.flatMap(p => {
+        const s = saldoParcela(n, p)
+        return s > 0.009 ? [{ data: p.vencimento, centavos: emCentavos(s), cliente: n.cliente, tipo: 'locadora' as const, pv: numDoc(n) }] : []
+      }))
       const { data: imp, error } = await supabase.from('tga_importacoes').select('id,em').eq('relatorio', 'em_aberto').order('em', { ascending: false }).limit(1)
       if (error) throw new Error(error.message)
-      if (!imp?.length) return setDados('vazio')
-      const [clientes, linhas] = await Promise.all([
-        pegar<ClienteTga>((a, b) => supabase.from('tga_clientes').select('codigo,nome,tipo').order('codigo').range(a, b)),
-        pegar<Linha>((a, b) => supabase.from('tga_em_aberto').select('documento,doc_numero,vencimento,valor_total,cliente_codigo,tipo_doc').eq('importacao_id', imp[0].id).order('id').range(a, b))
-      ])
-      const C = new Map(clientes.map(c => [c.codigo, c]))
-      const itens = linhas.filter(l => l.tipo_doc !== 'DV' && C.has(l.cliente_codigo)).map(l => {
-        const c = C.get(l.cliente_codigo)!
-        return { data: l.vencimento, centavos: emCentavos(+l.valor_total), cliente: c.nome || c.codigo, tipo: c.tipo, pv: l.doc_numero.replace(/^0+/, '') }
-      })
-      setDados({ em: imp[0].em, itens })
+      let particulares: Item[] = [], em = d
+      if (imp?.length) {
+        em = imp[0].em
+        const [clientes, linhas] = await Promise.all([
+          pegar<ClienteTga>((a, b) => supabase.from('tga_clientes').select('codigo,nome,tipo').order('codigo').range(a, b)),
+          pegar<Linha>((a, b) => supabase.from('tga_em_aberto').select('documento,doc_numero,vencimento,valor_total,cliente_codigo,tipo_doc').eq('importacao_id', imp[0].id).order('id').range(a, b))
+        ])
+        const C = new Map(clientes.map(c => [c.codigo, c]))
+        particulares = linhas.filter(l => l.tipo_doc !== 'DV' && C.get(l.cliente_codigo)?.tipo === 'particular').map(l => {
+          const c = C.get(l.cliente_codigo)!
+          return { data: l.vencimento, centavos: emCentavos(+l.valor_total), cliente: c.nome || c.codigo, tipo: 'particular' as const, pv: l.doc_numero.replace(/^0+/, '') }
+        })
+      }
+      const itens = [...doSite, ...particulares]
+      if (!itens.length && !imp?.length) return setDados('vazio')
+      setDados({ em, itens })
     })().catch(e => setErro(msgErro(e)))
   }, [])
 
@@ -73,10 +86,10 @@ export function Calendario() {
       <Tile label="Vencido, ainda não entrou" value={reais(somar(vencidos))} money cls={vencidos.length ? 'crit' : ''} foot={`${vencidos.length} títulos`} onClick={() => lista('Vencidos, ainda não entraram', vencidos)} />
       <Tile label="Próximos 7 dias" value={reais(somar(proximos))} money foot={`${proximos.length} títulos`} onClick={() => lista('Vencem nos próximos 7 dias', proximos)} />
       <Tile label={`A vencer em ${MESES[mes0]}`} value={reais(somar(doMes))} money foot={`${doMes.length} títulos`} />
-      <Tile label="Posição de" value={dia(dados.em.slice(0, 10))} foot="último Em Aberto importado" />
+      <Tile label="Particulares: posição de" value={dia(dados.em.slice(0, 10))} foot="último Em Aberto do TGA; notas fiscais = site ao vivo" />
     </div>
     <div className="stack" style={{ marginTop: 16 }}>
-      <Seg value={quem} onChange={setQuem} options={[['todos', 'Todos'], ['locadora', 'Locadoras'], ['particular', 'Particulares']]} />
+      <Seg value={quem} onChange={setQuem} options={[['todos', 'Todos'], ['locadora', 'Notas fiscais'], ['particular', 'Particulares']]} />
       <div className="btnrow" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <button className="btn ghost sm" onClick={() => mover(-1)} aria-label="Mês anterior">‹</button>
         <b style={{ textTransform: 'capitalize' }}>{MESES[mes0]} de {ano}</b>

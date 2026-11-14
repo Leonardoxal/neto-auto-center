@@ -12,7 +12,7 @@ import { BaixasTga } from './BaixasTga'
 const FMT = { day: '2-digit', month: '2-digit' } as const
 const dm = (iso: string) => new Date(iso + 'T12:00:00Z').toLocaleDateString('pt-BR', { ...FMT, timeZone: 'UTC' })
 
-async function carregar(): Promise<Nota[]> {
+export async function carregar(): Promise<Nota[]> {
   const pegar = async (t: string, ordem: string) => {
     const out: Record<string, unknown>[] = []
     for (let de = 0; ; de += 1000) {
