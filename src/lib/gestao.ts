@@ -37,5 +37,20 @@ export function faixaAtraso(dias: number): FaixaAtraso {
   if (dias <= 90) return '61 a 90 dias'
   return 'Mais de 90 dias'
 }
+/** Grade do mês (semana começa no domingo): lista de semanas, cada uma com 7 posições; dia fora do mês = null. `mes0` é 0 a 11. */
+export function gradeDoMes(ano: number, mes0: number): (string | null)[][] {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const primeiro = new Date(Date.UTC(ano, mes0, 1)).getUTCDay(), dias = new Date(Date.UTC(ano, mes0 + 1, 0)).getUTCDate()
+  const celulas: (string | null)[] = [...Array(primeiro).fill(null), ...Array.from({ length: dias }, (_, i) => `${ano}-${pad(mes0 + 1)}-${pad(i + 1)}`)]
+  while (celulas.length % 7) celulas.push(null)
+  return Array.from({ length: celulas.length / 7 }, (_, i) => celulas.slice(i * 7, i * 7 + 7))
+}
+/** Soma, em centavos, por dia (AAAA-MM-DD). */
+export function somaPorDia(itens: { data: string; centavos: number }[]): Map<string, number> {
+  const m = new Map<string, number>()
+  for (const it of itens) m.set(it.data, (m.get(it.data) ?? 0) + it.centavos)
+  return m
+}
+
 /** Perdida: passou mais de `limite` dias do vencimento sem pagamento. */
 export const perdida = (dias: number, limite = PRAZO_PERDA_DIAS) => dias > limite

@@ -9,13 +9,14 @@ import { Inicio, Parados, Patio } from './screens/Patio'
 import { Ficha } from './screens/Ficha'
 import { Cadastros, Historico, LocadoraFicha } from './screens/Cadastros'
 import { Relatorios } from './screens/Relatorios'
+import { Calendario } from './screens/Calendario'
 import { Financeiro } from './screens/Financeiro'
 
 const MENU_TODOS: [string, string, string][] = [
   ['inicio', 'Início', 'grid'], ['patio', 'Pátio ativo', 'car'], ['financeiro', 'Financeiro', 'receipt'],
-  ['rel', 'Relatórios', 'chart'], ['hist', 'Histórico de veículos', 'clock'], ['cad', 'Cadastros e configurações', 'gear'],
+  ['calendario', 'Calendário', 'cal'], ['rel', 'Relatórios', 'chart'], ['hist', 'Histórico de veículos', 'clock'], ['cad', 'Cadastros e configurações', 'gear'],
 ]
-const FIN = ['financeiro', 'rel']
+const FIN = ['financeiro', 'calendario', 'rel']
 
 function Login() {
   const [email, setEmail] = useState(''); const [senha, setSenha] = useState('')
@@ -98,10 +99,10 @@ export default function App() {
   const gerente = store.pode('relatorios')
   const MENU = MENU_TODOS.filter(m => !FIN.includes(m[0]) || gerente)
   const TABS: [string, string, string][] = gerente
-    ? [['inicio', 'Início', 'grid'], ['patio', 'Pátio', 'car'], ['financeiro', 'Financeiro', 'receipt'], ['mais', 'Mais', 'more']]
+    ? [['inicio', 'Início', 'grid'], ['patio', 'Pátio', 'car'], ['financeiro', 'Financeiro', 'receipt'], ['calendario', 'Calendário', 'cal'], ['mais', 'Mais', 'more']]
     : [['inicio', 'Início', 'grid'], ['patio', 'Pátio', 'car'], ['hist', 'Histórico', 'clock'], ['cad', 'Cadastros', 'gear']]
   if (!tela) tela = tab === 'patio' ? <Patio /> : tab === 'hist' ? <Historico /> : tab === 'cad' ? <Cadastros /> : tab === 'rel' && gerente ? <Relatorios />
-    : tab === 'financeiro' && gerente ? <Financeiro /> : tab === 'mais' ? <Mais itens={MENU.filter(m => !TABS.some(t => t[0] === m[0]))} go={nav.go} /> : <Inicio />
+    : tab === 'financeiro' && gerente ? <Financeiro /> : tab === 'calendario' && gerente ? <Calendario /> : tab === 'mais' ? <Mais itens={MENU.filter(m => !TABS.some(t => t[0] === m[0]))} go={nav.go} /> : <Inicio />
   const cur0 = top ? (top.r === 'patio' ? 'patio' : tab) : tab
   const cur = !largo && !TABS.some(t => t[0] === cur0) ? 'mais' : cur0
   const nPatio = store.ativos.length

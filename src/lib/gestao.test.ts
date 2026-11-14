@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DADOS_INSUFICIENTES, atrasoNoPagamento, brl, diasAtraso, emCentavos, faixaAtraso, pagoEmDia, perdida, prazoDias, somaOuNulo, totalBaixa
+  DADOS_INSUFICIENTES, atrasoNoPagamento, brl, diasAtraso, emCentavos, faixaAtraso, gradeDoMes, pagoEmDia, perdida, prazoDias, somaOuNulo, somaPorDia, totalBaixa
 } from './gestao'
 
 describe('dinheiro em centavos', () => {
@@ -55,6 +55,29 @@ describe('faixas de atraso', () => {
     [-5, 'A vencer'], [0, 'A vencer'], [1, '1 a 15 dias'], [15, '1 a 15 dias'], [16, '16 a 30 dias'], [30, '16 a 30 dias'],
     [31, '31 a 60 dias'], [60, '31 a 60 dias'], [61, '61 a 90 dias'], [90, '61 a 90 dias'], [91, 'Mais de 90 dias']
   ])('%i dias cai em "%s"', (dias, faixa) => { expect(faixaAtraso(dias)).toBe(faixa) })
+})
+
+describe('calendário', () => {
+  it('grade de novembro de 2026: começa no domingo, 30 dias, semanas completas', () => {
+    const g = gradeDoMes(2026, 10) // 01/11/2026 é domingo
+    expect(g[0][0]).toBe('2026-11-01')
+    expect(g.every(s => s.length === 7)).toBe(true)
+    expect(g.flat().filter(Boolean)).toHaveLength(30)
+    expect(g.at(-1)!.filter(Boolean).at(-1)).toBe('2026-11-30')
+  })
+  it('grade com mês que não começa no domingo deixa dias vazios no início', () => {
+    const g = gradeDoMes(2026, 11) // 01/12/2026 é terça
+    expect(g[0].slice(0, 2)).toEqual([null, null])
+    expect(g[0][2]).toBe('2026-12-01')
+    expect(g.flat().filter(Boolean)).toHaveLength(31)
+  })
+  it('fevereiro bissexto tem 29 dias', () => { expect(gradeDoMes(2028, 1).flat().filter(Boolean)).toHaveLength(29) })
+  it('soma por dia em centavos', () => {
+    const m = somaPorDia([{ data: '2026-11-20', centavos: 10050 }, { data: '2026-11-20', centavos: 5 }, { data: '2026-11-21', centavos: 100 }])
+    expect(m.get('2026-11-20')).toBe(10055)
+    expect(m.get('2026-11-21')).toBe(100)
+    expect(m.get('2026-11-22')).toBeUndefined()
+  })
 })
 
 describe('perda do crediário', () => {

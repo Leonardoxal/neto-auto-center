@@ -3,6 +3,7 @@ dist
 dev-dist
 .env
 .env.local
+scripts/.estado-notas.json
 *.log
 .DS_Store
 
