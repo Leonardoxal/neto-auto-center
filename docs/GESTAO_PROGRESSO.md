@@ -78,6 +78,12 @@ Pendente: acesso ao banco do TGA.
 - **Formatos:** Baixados pelo PDF (`pdftotext`); Em Aberto pelo `.xls`/`.xlsx` (lido pelo Excel em `scripts/xls-para-json.ps1`, precisa do Excel instalado). Com a planilha real: 2.121 linhas, soma conferida com o rodapé.
 - **Pendência:** a tela mostra o código do cliente (ex.: `C02170`), não o nome. Mostrar o nome exigiria gravá-lo no banco (restrito a Administrador e Gerência); decidir com o responsável.
 
+### Lançamentos internos e serviço à vista (relato do responsável, 14/11/2026)
+
+- Quando a locadora aprova um valor, sai a nota fiscal e, às vezes, um segundo movimento no TGA só para lançar a mão de obra do mecânico, sem nenhuma das duas lojas (para não dar conflito nos relatórios). É interno: não é venda nem conta a receber.
+- Serviço que sai com cliente "consumidor" (cadastro sem nome verdadeiro) é pago na hora, com vendedora própria no TGA (a vendedora não aparece nos relatórios A Receber).
+- Decisão: importar tudo e tratar depois. Ainda não há marca para distinguir esses movimentos no Em Aberto e no Baixados (clientes genéricos aparecem com nome como "CLIENTE"). Até lá, podem ser contados como particulares. Pendência para a etapa 2: marcar cliente genérico como `consumidor` (fora de "a receber"), antes de usar os números.
+
 ### Resultado com o PDF real de Baixados (sem expor dados)
 
 2.097 linhas lidas. Soma do valor pago e do valor original iguais ao total do rodapé e aos totais de cada cliente (conferido). 21 linhas não fecham a conta no próprio TGA. Há diferença de centavos em juros no total de alguns clientes (arredondamento do TGA): aparece como aviso, não bloqueia.

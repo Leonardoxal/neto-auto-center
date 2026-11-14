@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
-import { classificarCliente, lerEmAbertoXls, lerRelatorioTga } from '../src/lib/tga.ts'
+import { classificarCliente, lerEmAbertoXls, lerRelatorioTga, semConsumidores } from '../src/lib/tga.ts'
 
 try { process.loadEnvFile(fileURLToPath(new URL('.env', import.meta.url))) } catch (e) { if (e.code !== 'ENOENT') throw e }
 
@@ -46,6 +46,9 @@ if (r.divergencias.length) {
   process.exit(2)
 }
 console.log('Conferência: soma das linhas bate com o rodapé e com cada cliente.')
+// cliente consumidor (cadastro genérico, pago na hora) não entra no "a receber"; sai só depois da conferência, pois o rodapé o inclui
+r = semConsumidores(r)
+console.log(`Descartadas ${r.descartadas.linhas} linha(s) de cliente consumidor; seguem ${r.linhas.length} linhas, total ${reais(r.soma.pago)}.`)
 if (!enviar) sai('Nada foi gravado (falta --enviar).', 0)
 
 const { NETO_SUPABASE_URL: url, NETO_SUPABASE_ANON_KEY: chave, NETO_EMAIL: email, NETO_SENHA: senha } = process.env

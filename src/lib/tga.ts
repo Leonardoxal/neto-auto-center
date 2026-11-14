@@ -42,6 +42,8 @@ export interface ResultadoTga {
   rodape: Partial<Totais> & { semDevolucao?: number; devolucoes?: number }
   /** código do cliente -> nome. Só para uso local (classificar locadora x particular); não enviar ao banco. */
   clientes: Record<string, string>
+  /** preenchido por semConsumidores: linhas de cliente consumidor que ficaram de fora */
+  descartadas?: { linhas: number; pago: number }
   /** vazio = conferido. Nunca contém nome nem código de cliente. */
   divergencias: string[]
   /** não bloqueiam: arredondamento de centavos nos juros e linhas que não fecham a conta */
@@ -226,6 +228,19 @@ export function lerEmAbertoXls(linhasXls: LinhaXls[], totalRodape: number | null
   const naoConferem = linhas.filter(l => !l.confere).length
   if (naoConferem) avisos.push(`${naoConferem} linha(s) em que original + juros + multa não dá o total`)
   return { relatorio: 'em_aberto', linhas, soma, rodape, clientes, divergencias, avisos }
+}
+
+// ---------- cliente consumidor (genérico): fora do "a receber" ----------
+/** Cadastro genérico usado em serviço pago na hora: "CLIENTE", "CLIENTE.", "CLIENTE CONSUMIDOR". Não entra nos relatórios de recebimento. */
+export const ehConsumidor = (nomeTga: string) => { const n = nomeTga.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, ''); return n === 'CLIENTE' || n.includes('CONSUMIDOR') }
+/** Tira as linhas de cliente consumidor e refaz a soma. Chamar DEPOIS de conferir os totais do arquivo, que incluem essas linhas. */
+export function semConsumidores(r: ResultadoTga): ResultadoTga {
+  const fora = new Set(Object.entries(r.clientes).filter(([, nome]) => ehConsumidor(nome)).map(([codigo]) => codigo))
+  const linhas = r.linhas.filter(l => !fora.has(l.clienteCodigo))
+  const descartadas = r.linhas.filter(l => fora.has(l.clienteCodigo))
+  const clientes = Object.fromEntries(Object.entries(r.clientes).filter(([codigo]) => !fora.has(codigo)))
+  return { ...r, linhas, clientes, soma: linhas.reduce((s, l) => mais(s, totaisDe(l)), zero()),
+    descartadas: { linhas: descartadas.length, pago: descartadas.reduce((s, l) => s + totaisDe(l).pago, 0) } }
 }
 
 // ---------- locadora x particular ----------

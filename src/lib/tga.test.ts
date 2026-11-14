@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { centavos, classificarCliente, dataIso, lerEmAbertoXls, lerRelatorioTga } from './tga'
+import { centavos, classificarCliente, dataIso, ehConsumidor, lerEmAbertoXls, lerRelatorioTga, semConsumidores } from './tga'
 
 // Fixtures sintéticas no formato de `pdftotext -raw` do TGA. Nomes, códigos e valores são inventados.
 const BAIXADOS = `NETO AUTO CENTER - NETO AUTO CENTER
@@ -143,6 +143,23 @@ describe('lerEmAbertoXls', () => {
   it('linhas repetidas ganham chaves diferentes', () => {
     const r = lerEmAbertoXls([base, base], 1539.90656)
     expect(r.linhas[0].chave).not.toBe(r.linhas[1].chave)
+  })
+})
+
+describe('cliente consumidor', () => {
+  it('reconhece o cadastro genérico, com ou sem ponto, acento ou espaço', () => {
+    for (const n of ['CLIENTE', 'CLIENTE.', 'Cliente ', 'CLIENTE CONSUMIDOR', 'CONSUMIDOR FINAL']) expect(ehConsumidor(n)).toBe(true)
+    for (const n of ['CLIENTE TESTE UM', 'JOAO DA SILVA', 'LOCALIZA FROTA']) expect(ehConsumidor(n)).toBe(false)
+  })
+  it('descarta as linhas do consumidor depois da conferência e refaz a soma', () => {
+    const texto = BAIXADOS.replace('CLIENTE TESTE DOIS', 'CLIENTE CONSUMIDOR')
+    const r = lerRelatorioTga(texto)
+    expect(r.divergencias).toEqual([]) // o arquivo inteiro confere
+    const s = semConsumidores(r)
+    expect(s.linhas.map(l => l.clienteCodigo)).toEqual(['C00001', 'C00001'])
+    expect(s.clientes).toEqual({ C00001: 'CLIENTE TESTE UM' })
+    expect(s.descartadas).toEqual({ linhas: 1, pago: -5000 })
+    expect(s.soma.pago).toBe(70500)
   })
 })
 
