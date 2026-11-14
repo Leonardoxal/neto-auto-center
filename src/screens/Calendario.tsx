@@ -44,7 +44,10 @@ export function Calendario() {
           pegar<Linha>((a, b) => supabase.from('tga_em_aberto').select('documento,doc_numero,vencimento,valor_total,cliente_codigo,tipo_doc').eq('importacao_id', imp[0].id).order('id').range(a, b))
         ])
         const C = new Map(clientes.map(c => [c.codigo, c]))
-        particulares = linhas.filter(l => l.tipo_doc !== 'DV' && C.get(l.cliente_codigo)?.tipo === 'particular').map(l => {
+        // Quem tem nota fiscal no site é controlado lá (o Em Aberto do TGA não acompanha as baixas do site).
+        const chave = (s: string) => s.normalize('NFD').replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+        const comNota = new Set(notas.map(n => chave(n.cliente)))
+        particulares = linhas.filter(l => l.tipo_doc !== 'DV' && C.get(l.cliente_codigo)?.tipo === 'particular' && !comNota.has(chave(C.get(l.cliente_codigo)!.nome))).map(l => {
           const c = C.get(l.cliente_codigo)!
           return { data: l.vencimento, centavos: emCentavos(+l.valor_total), cliente: c.nome || c.codigo, tipo: 'particular' as const, pv: l.doc_numero.replace(/^0+/, '') }
         })
