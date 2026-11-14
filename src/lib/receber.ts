@@ -12,7 +12,7 @@ export const numDoc = (n: Nota) => n.numero_rps || n.numero
 
 /** data de hoje no fuso da oficina, AAAA-MM-DD */
 export const hoje = (agora = Date.now()) => new Date(agora - 4 * 36e5).toISOString().slice(0, 10)
-const diasEntre = (a: string, b: string) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5)
+export const diasEntre = (a: string, b: string) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5)
 const r2 = (v: number) => Math.round(v * 100) / 100
 
 export const recebidoParcela = (n: Nota, p: Parcela) => r2(n.recebimentos.filter(r => r.parcela_id === p.id && !r.estornado_em).reduce((s, r) => s + +r.valor, 0))
