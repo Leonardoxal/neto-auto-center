@@ -1,6 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { aprovados, avisoAprovado, inicioDoDia, patio, relatorioFim, relatorioManha } from '../textos.js'
+import { aprovados, avisoAprovado, inicioDoDia, patio, relatorioFim, relatorioManha, vencimentos } from '../textos.js'
+
+test('vencimentos separa hoje, amanhã, 7 dias e atrasado', () => {
+  const p = [{ cliente: 'A', vencimento: '2026-11-14', saldo: 100 }, { cliente: 'B', vencimento: '2026-11-15', saldo: 200 },
+    { cliente: 'C', vencimento: '2026-11-16', saldo: 300 }, { cliente: 'D', vencimento: '2026-11-20', saldo: 400 }, { cliente: 'E', vencimento: '2026-12-30', saldo: 999 }]
+  const t = vencimentos(p, '2026-11-15')
+  assert.match(t, /VENCE HOJE: R\$\s200,00 em 1 parcela/)
+  assert.match(t, /VENCE AMANHÃ: R\$\s300,00 em 1/)
+  assert.match(t, /PRÓXIMOS 7 DIAS: R\$\s400,00 em 1/)
+  assert.match(t, /ATRASADO: R\$\s100,00 em 1/)
+  assert.match(vencimentos([], '2026-11-15'), /ATRASADO: nada/)
+})
 
 // 06/11/2026 18h00 em Cuiabá (UTC−4) = 22h00 UTC
 const AGORA = Date.parse('2026-11-06T22:00:00Z')

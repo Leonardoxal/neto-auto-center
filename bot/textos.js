@@ -57,6 +57,24 @@ function atencao(vs, agora) {
   return L
 }
 
+/** Aviso de vencimentos das notas fiscais. parcelas: [{ cliente, vencimento (AAAA-MM-DD), saldo }] só com saldo em aberto. */
+export function vencimentos(parcelas, hoje) {
+  const dias = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / DIA)
+  const soma = l => l.reduce((s, p) => s + p.saldo, 0)
+  const atrasadas = parcelas.filter(p => p.vencimento < hoje)
+  const hojeL = parcelas.filter(p => p.vencimento === hoje)
+  const amanha = parcelas.filter(p => dias(hoje, p.vencimento) === 1)
+  const semana = parcelas.filter(p => dias(hoje, p.vencimento) >= 2 && dias(hoje, p.vencimento) <= 7)
+  const linha = (nome, l) => `${nome}: ${l.length ? `${brl(soma(l))} em ${l.length} parcela(s)` : 'nada'}`
+  const porCliente = l => {
+    const m = new Map(); for (const p of l) m.set(p.cliente, (m.get(p.cliente) ?? 0) + p.saldo)
+    return [...m].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c, v]) => `• ${c}: ${brl(v)}`)
+  }
+  const L = [CABECALHO, `VENCIMENTOS — ${fData(`${hoje}T12:00:00Z`)}`, '', linha('VENCE HOJE', hojeL), ...porCliente(hojeL), '',
+    linha('VENCE AMANHÃ', amanha), '', linha('PRÓXIMOS 7 DIAS', semana), '', linha('ATRASADO', atrasadas), ...porCliente(atrasadas)]
+  return L.join('\n')
+}
+
 export const ajuda = () => [
   CABECALHO, 'Comandos:', '',
   'PATIO — veículos na oficina, separados por situação',
