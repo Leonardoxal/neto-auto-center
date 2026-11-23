@@ -107,6 +107,21 @@ permanente com o WhatsApp Web. Usa o mesmo banco do painel, então o que muda nu
 - Com o computador desligado não há avisos nem relatórios. Ao religar, os avisos pendentes são enviados e sai o
   relatório do pátio; o fechamento só sai se o computador estiver ligado entre 17h00 e 19h00.
 
+### Conector fiscal (notas de compra)
+Busca na SEFAZ as NF-e emitidas contra o CNPJ da empresa e as entrega à aba Notas de compra. Roda no mesmo computador
+da oficina, em processo separado (`bot\fiscal-iniciar.cmd`, disparado por `bot\iniciar.cmd`; registro em `bot\fiscal.log`).
+Detalhes, limites e solução de problemas: `docs/NOTAS_COMPRA.md`.
+
+1. Guarde o certificado A1 (`.pfx`) numa pasta deste computador, fora do repositório e fora do OneDrive (ex.: `C:\neto-certificado\`).
+2. Em `bot/.env`, preencha `CERT_PFX_CAMINHO` e `CERT_PFX_SENHA`. `FISCAL_AMBIENTE` começa em `homologacao`; só mude para `producao` com o responsável acompanhando.
+3. Confira com `npm run certificado` (em `bot/`): mostra só titular, CNPJ e validade, nunca a senha nem a chave.
+4. Aplique as migrações `0012`, `0013` e `0014` (nesta ordem) depois de validá-las em banco de teste.
+5. Ligue com o robô (`iniciar.cmd`) ou, para testar, `npm run fiscal`. Para parar: feche a janela "NETO - fiscal" ou encerre o processo `node`.
+
+**Troca do certificado (renovação):** substitua o arquivo, ajuste `CERT_PFX_CAMINHO`/`CERT_PFX_SENHA`, rode `npm run certificado` e reinicie o conector. A aba avisa 30 dias antes de vencer.
+
+**Se a SEFAZ bloquear (erro 656, consumo indevido):** não é preciso fazer nada além de esperar cerca de 1 hora; o conector só consulta de novo na janela seguinte e a aba mostra o horário. Não use `npm run consulta-teste` repetidamente: cada consulta fora do intervalo prolonga o bloqueio.
+
 ## Entregas
 1. **Base e pátio** (esta): login e perfis, locadoras, entrada rápida, pátio (lista, tabela, quadro), ficha com orçamento, envio, desconto, aprovação, recusa, nota fiscal, movimentação, saída, edição, arquivamento, histórico, cadastros.
 2. Telas de aprovações, serviços em execução e faturamento.
