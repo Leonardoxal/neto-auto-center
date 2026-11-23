@@ -11,3 +11,10 @@ bot/sessao/
 bot/estado.json
 bot/qr.html
 bot/bot.log
+
+# certificado digital e chaves: nunca no repositório
+*.pfx
+*.p12
+*.pem
+*.key
+bot/certificado/
