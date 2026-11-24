@@ -1,7 +1,7 @@
 // Relatórios: cálculos puros sobre a lista de atendimentos (histórico completo).
 // Cada indicador usa a data do próprio evento: entrada, saída, aprovação, negociação ou emissão da nota.
 import {
-  FISICA, LISTAS, descontoConcedido, faturado, noPatio, tempoAprovacao, valorInicial, type Atendimento, type Locadora,
+  FISICA, LISTAS, descontoConcedido, faturado, noPatio, tempoAprovacao, valorAtual, valorInicial, type Atendimento, type Locadora,
 } from './domain'
 import { brl, dur, durOu, fData, fDataHora, pct } from './format'
 
@@ -11,7 +11,7 @@ export interface Tabela { title: string; cols: string[]; rows: (string | number)
 export interface Relatorio { cards: Card[]; pre?: Tabela[]; main: Tabela }
 
 export const TIPOS: [string, string][] = [
-  ['ger', 'Resumo gerencial'], ['mes', 'Comparativo mensal'], ['patio', 'Pátio'], ['aprov', 'Aprovações'],
+  ['ger', 'Resumo gerencial'], ['mes', 'Comparativo mensal'], ['patio', 'Pátio'], ['espera', 'Carros aguardando aprovação'], ['aprov', 'Aprovações'],
   ['fat', 'Faturamento'], ['loc', 'Por locadora'], ['fech', 'Fechamento'],
 ]
 export const PERIODOS: [string, string][] = [['hoje', 'Hoje'], ['sem', 'Semana'], ['semant', 'Sem. anterior'], ['mes', 'Mês'], ['mesant', 'Mês anterior'], ['custom', 'Personalizado']]
@@ -80,12 +80,25 @@ export function gm(A: Atendimento[], ini: number, fim: number) {
   }
 }
 
-export function relatorio(tipo: string, A: Atendimento[], [ini, fim]: Range, locadoras: Locadora[], opts: { meses?: number } = {}): Relatorio {
+export function relatorio(tipo: string, A: Atendimento[], [ini, fim]: Range, locadoras: Locadora[], opts: { meses?: number; agora?: number } = {}): Relatorio {
   const locNome = (id: string) => locadoras.find(l => l.id === id)?.nome ?? '—'
   const at = (t: string | null | undefined) => { const x = T(t); return x != null && x >= ini && x <= fim }
   const presente = (a: Atendimento) => T(a.entrada)! <= fim && (!a.saida || T(a.saida)! > fim)
   const situacao = (a: Atendimento) => (noPatio(a) ? a.sit_operacional : a.arquivado ? 'Arquivado' : FISICA[a.sit_fisica])
 
+  if (tipo === 'espera') { // retrato de agora: ignora o período e usa a mesma regra da lista "Aguardando aprovação" do pátio
+    const agora = opts.agora ?? Date.now()
+    const set = A.filter(LISTAS.aprov.f).sort((a, b) => (T(a.enviado_em) ?? Number.MAX_SAFE_INTEGER) - (T(b.enviado_em) ?? Number.MAX_SAFE_INTEGER))
+    const esp = set.map(a => tempoAprovacao(a, agora).ms).filter((x): x is number => x != null)
+    return {
+      cards: [['Aguardando aprovação (hoje)', set.length, 'n'], ['Valor em orçamento (hoje)', sum(set.map(a => valorAtual(a) ?? 0)), 'r'],
+        ['Espera média (hoje)', mean(esp), 'd'], ['Espera mais longa (hoje)', esp.length ? Math.max(...esp) : null, 'd']],
+      main: { title: 'Carros no pátio aguardando aprovação', placaCol: 0,
+        cols: ['Placa', 'Modelo', 'Locadora', 'Responsável', 'Enviado em', 'Esperando há', 'Valor do orçamento', 'Situação comercial'],
+        rows: set.map(a => [a.placa, a.modelo || '—', locNome(a.locadora_id), a.responsavel || '—', fDataHora(a.enviado_em), durOu(tempoAprovacao(a, agora).ms), brl(valorAtual(a)), a.sit_comercial]),
+        ids: set.map(a => a.id) },
+    }
+  }
   if (tipo === 'ger') {
     const g = gm(A, ini, fim), set = [...g.vol].sort((a, b) => T(a.entrada)! - T(b.entrada)!)
     const locs = locadoras.map(l => ({ l, x: gm(A.filter(a => a.locadora_id === l.id), ini, fim) })).filter(r => r.x.vol.length).sort((a, b) => b.x.vA + b.x.fat - (a.x.vA + a.x.fat))

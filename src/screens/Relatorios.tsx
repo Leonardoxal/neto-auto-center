@@ -47,7 +47,7 @@ export function Relatorios() {
   const cur = useMemo(() => relatorio(tipo, A, rg, store.locadoras, { meses: +meses }), [tipo, A, rg[0], rg[1], store.locadoras, meses])
   const prev = useMemo(() => relatorio(tipo, A, rgAnt, store.locadoras, { meses: +meses }), [tipo, A, rgAnt[0], rgAnt[1], store.locadoras, meses])
   const titulo = 'Relatório de ' + TIPOS.find(t => t[0] === tipo)![1].toLowerCase()
-  const periodo = `${fData(rg[0])} a ${fData(rg[1])}`
+  const periodo = tipo === 'espera' ? `situação atual em ${fData(Date.now())}` : `${fData(rg[0])} a ${fData(rg[1])}`
   const filtros = [loc ? 'Locadora: ' + store.locNome(loc) : 'Todas as locadoras', resp ? 'Responsável: ' + resp : 'Todos os responsáveis', q ? 'Busca: ' + q : '', arq ? 'Inclui arquivados' : 'Sem arquivados'].filter(Boolean).join('   ·   ')
   const nomeArq = `NETO-AUTO-CENTER_${TIPOS.find(t => t[0] === tipo)![1].replace(/\s+/g, '-')}_${periodo.replace(/\//g, '-').replace(' a ', '_a_')}`
   const resps = [...new Set((todos ?? []).map(a => a.responsavel).filter(Boolean))]
@@ -82,8 +82,8 @@ export function Relatorios() {
     <Nav title="Relatórios" right={<button className="tbtn strong" onClick={exportar} disabled={!todos}><Ic n="out" sm /> PDF</button>} />
     <div className="stack">
       <Seg value={tipo} onChange={setTipo} options={TIPOS} />
-      <Seg value={per} onChange={setPer} options={PERIODOS} />
-      {per === 'custom' && <div className="toolbar" style={{ marginTop: 0 }}>
+      {tipo !== 'espera' && <Seg value={per} onChange={setPer} options={PERIODOS} />}
+      {tipo !== 'espera' && per === 'custom' &&<div className="toolbar" style={{ marginTop: 0 }}>
         <label className="muted sm">De <input type="date" id="ci" value={ci} onChange={e => setCi(e.target.value)} /></label>
         <label className="muted sm">até <input type="date" id="cf" value={cf} onChange={e => setCf(e.target.value)} /></label></div>}
       <div className="muted sm">{periodo}</div>
@@ -96,7 +96,7 @@ export function Relatorios() {
       </div>
     </div>
     {erro ? <div className="banner">Não foi possível carregar os dados: {erro}</div> : !todos ? <div className="loading">Carregando o histórico…</div> : <>
-      <Section title="Resumo" foot="Comparação com o período anterior de mesma duração. Os relatórios consultam o histórico completo, não só o pátio ativo.">
+      <Section title="Resumo" foot={tipo === 'espera' ? 'Situação de agora: carros no pátio com orçamento enviado e sem resposta da locadora, do mais antigo para o mais recente.' : 'Comparação com o período anterior de mesma duração. Os relatórios consultam o histórico completo, não só o pátio ativo.'}>
         <div className="tiles t4">{cur.cards.map(([l, v, f], i) => { const d = l.includes('(hoje)') ? { txt: 'situação atual' } : delta(v, prev.cards[i]?.[1] ?? null, f === 'd')
           return <div className="tile" key={l} style={{ cursor: 'default' }}><span className="tl">{l}</span><span className={`tv ${f !== 'n' ? 'money' : ''}`}>{fmtCard(v, f)}</span>
             <span className="tf">{d ? <span className={`delta ${d.bom === undefined ? '' : d.bom ? 'up' : 'dn'}`}>{d.txt}</span> : 'sem comparação'}</span></div> })}</div>

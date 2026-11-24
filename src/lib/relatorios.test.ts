@@ -27,6 +27,27 @@ describe('períodos no fuso da oficina', () => {
   })
 })
 
+describe('carros aguardando aprovação', () => {
+  const env = (o: Partial<Atendimento>) => at({ sit_comercial: 'Aguardando aprovação', enviado_em: '2026-10-19T13:00:00Z',
+    orcamento_revisoes: [{ id: 'r', seq: 1, valor: 800, em: '2026-10-19T12:00:00Z', obs: '' }], ...o })
+  const A = [
+    env({ placa: 'AAA1A11', enviado_em: '2026-10-19T13:00:00Z' }),
+    env({ placa: 'BBB2B22', sit_comercial: 'Em negociação', enviado_em: '2026-10-15T13:00:00Z' }),
+    env({ placa: 'CCC3C33', sit_comercial: 'Aprovado' }),
+    env({ placa: 'DDD4D44', sit_fisica: 'entregue' }),
+    env({ placa: 'EEE5E55', arquivado: true }),
+  ]
+  const r = relatorio('espera', A, range('mes', undefined, undefined, AGORA), [], { agora: AGORA })
+  it('só carros no pátio esperando resposta, o mais antigo primeiro', () => {
+    expect(r.main.rows.map(l => l[0])).toEqual(['BBB2B22', 'AAA1A11'])
+  })
+  it('soma o valor e calcula a espera', () => {
+    expect(r.cards[0][1]).toBe(2)
+    expect(r.cards[1][1]).toBe(1600)
+    expect(r.cards[3][1]).toBe(5 * 864e5) // 15/10 13:00Z até 20/10 13:00Z
+  })
+})
+
 describe('indicadores', () => {
   const A = [
     at({ entrada: '2026-10-02T12:00:00Z', enviado_em: '2026-10-03T12:00:00Z', aprovado_em: '2026-10-05T12:00:00Z', valor_aprovado: 1700,
